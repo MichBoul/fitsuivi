@@ -110,6 +110,18 @@ details.ex[open] summary::after{transform:rotate(90deg)}
 /* Graphiques */
 canvas.chart{display:block;width:100%;height:230px;margin-top:6px}
 
+/* Recherche d'aliments */
+.results{margin:6px 0 8px}
+.result{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:8px 10px;margin-top:6px;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:10px;color:var(--text);font:inherit;cursor:pointer}
+.result:active{border-color:var(--accent)}
+.result .main{flex:1;min-width:0}
+.result .name{font-weight:600;font-size:15px}
+.result .sub{font-size:12px;color:var(--muted)}
+.result .src{font-size:11px;color:var(--muted);flex:none}
+.inline{display:flex;gap:8px}
+.inline .btn{width:auto;flex:none}
+.selected{background:rgba(79,140,255,.10);border:1px solid rgba(79,140,255,.4);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+
 /* Barres de progression */
 .progress{margin-bottom:12px}
 .progress .head{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:4px}
@@ -277,15 +289,23 @@ nav.tabbar button.active .ic{filter:none;opacity:1}
       <div class="card">
         <h2>Ajouter un aliment</h2>
         <form id="foodForm" autocomplete="off">
-          <div class="grid2">
-            <div class="field">
-              <label for="foodBase">Base (valeurs / 100 g)</label>
-              <select id="foodBase"></select>
+          <div class="field">
+            <label for="foodSearch">Chercher un aliment</label>
+            <input id="foodSearch" type="search" autocomplete="off" enterkeyhint="search" placeholder="poulet, skyr, pain de mie…">
+            <div id="foodResults" class="results"></div>
+            <button type="button" class="btn secondary" id="foodOnlineBtn">🔎 Chercher les produits de marque (Open Food Facts)</button>
+          </div>
+          <div class="field">
+            <label for="foodBarcode">… ou code-barres du paquet</label>
+            <div class="inline">
+              <input id="foodBarcode" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="3017620422003">
+              <button type="button" class="btn secondary" id="foodBarcodeBtn">OK</button>
             </div>
-            <div class="field">
-              <label for="foodQty">Quantité (g)</label>
-              <input id="foodQty" type="number" inputmode="decimal" step="any" min="0" value="100">
-            </div>
+          </div>
+          <div id="foodSelected"></div>
+          <div class="field">
+            <label for="foodQty">Quantité (g)</label>
+            <input id="foodQty" type="number" inputmode="decimal" step="any" min="0" value="100">
           </div>
           <div class="field">
             <label for="foodName">Nom</label>
@@ -298,7 +318,7 @@ nav.tabbar button.active .ic{filter:none;opacity:1}
             <div class="field"><label for="foodFat">Lipides (g)</label><input id="foodFat" type="number" inputmode="decimal" step="any" min="0"></div>
           </div>
           <button class="btn" type="submit" id="foodSubmit">Ajouter</button>
-          <p class="hint">Valeurs de la base indicatives : ajuste-les selon l'étiquette de ton produit.</p>
+          <p class="hint">Valeurs indicatives (base intégrée type Ciqual, ou Open Food Facts pour les produits de marque) : vérifie l'étiquette en cas de doute.</p>
         </form>
       </div>
       <div class="card">
@@ -438,6 +458,8 @@ const state = {
   lastLoad: 0,
   loadingPromise: null,
   importPending: null,
+  selectedFood: null,
+  foodResults: [],
 };
 let sb = null; // client Supabase, créé au démarrage
 
@@ -997,36 +1019,179 @@ function drawWeightChart() {
 }
 
 // ---------- ALIMENTATION ----------
-// Valeurs indicatives pour 100 g.
-const FOOD_DB = [
-  { name: "Blanc de poulet cuit", kcal: 165, p: 31, c: 0, f: 3.6 },
-  { name: "Riz blanc cuit", kcal: 130, p: 2.7, c: 28, f: 0.3 },
-  { name: "Pâtes cuites", kcal: 150, p: 5.5, c: 30, f: 0.9 },
-  { name: "Œuf entier", kcal: 143, p: 12.6, c: 0.7, f: 9.5 },
-  { name: "Flocons d'avoine", kcal: 370, p: 13, c: 60, f: 7 },
-  { name: "Thon au naturel (égoutté)", kcal: 116, p: 26, c: 0, f: 1 },
-  { name: "Saumon", kcal: 208, p: 20, c: 0, f: 13 },
-  { name: "Steak haché 5 % MG", kcal: 125, p: 21, c: 0, f: 5 },
-  { name: "Jambon blanc", kcal: 115, p: 21, c: 1, f: 3 },
-  { name: "Fromage blanc 0 %", kcal: 47, p: 7.5, c: 4, f: 0.1 },
-  { name: "Skyr nature", kcal: 63, p: 11, c: 4, f: 0.2 },
-  { name: "Lait demi-écrémé", kcal: 46, p: 3.3, c: 4.8, f: 1.6 },
-  { name: "Emmental", kcal: 380, p: 28, c: 0, f: 30 },
-  { name: "Banane", kcal: 89, p: 1.1, c: 23, f: 0.3 },
-  { name: "Pomme", kcal: 52, p: 0.3, c: 14, f: 0.2 },
-  { name: "Amandes", kcal: 600, p: 21, c: 10, f: 50 },
-  { name: "Beurre de cacahuète", kcal: 590, p: 25, c: 16, f: 50 },
-  { name: "Huile d'olive", kcal: 900, p: 0, c: 0, f: 100 },
-  { name: "Pain complet", kcal: 240, p: 9, c: 44, f: 2.5 },
-  { name: "Pomme de terre cuite", kcal: 80, p: 2, c: 17, f: 0.1 },
-  { name: "Patate douce cuite", kcal: 90, p: 2, c: 21, f: 0.1 },
-  { name: "Lentilles cuites", kcal: 116, p: 9, c: 20, f: 0.4 },
-  { name: "Brocoli cuit", kcal: 35, p: 2.8, c: 4.5, f: 0.4 },
-  { name: "Haricots verts cuits", kcal: 30, p: 2, c: 4, f: 0.2 },
-  { name: "Avocat", kcal: 160, p: 2, c: 2, f: 15 },
-  { name: "Chocolat noir 70 %", kcal: 580, p: 8, c: 35, f: 42 },
-  { name: "Protéine en poudre (whey)", kcal: 375, p: 75, c: 8, f: 5 },
-];
+// Base intégrée : valeurs indicatives pour 100 g (type table Ciqual).
+// Format : "Nom|kcal|protéines|glucides|lipides"
+const FOOD_DB_RAW = `
+Blanc de poulet cru|110|23|0|1.8
+Blanc de poulet cuit|165|31|0|3.6
+Haut de cuisse de poulet sans peau cru|120|19|0|5
+Pilon de poulet cuit (sans os)|185|27|0|8.5
+Poulet rôti avec peau (sans os)|215|25|0|13
+Escalope de dinde crue|105|23|0|1.5
+Steak haché 5 % cru|125|21|0|5
+Steak haché 15 % cru|215|18|0|15.5
+Bœuf rumsteck cru|120|22|0|3.5
+Bœuf haché 20 % cru|250|17|0|20
+Filet mignon de porc cru|120|22|0|3.5
+Côte de porc crue|190|19|0|12.5
+Jambon blanc|115|21|1|3
+Jambon cru|245|27|0.5|15
+Blanc de dinde en tranches|105|21|1|1.8
+Lardons|270|15|0.5|23
+Saucisse de Toulouse crue|270|15|1|23
+Merguez crue|295|15|1|26
+Chorizo|450|24|2|39
+Saucisson sec|420|26|2|34
+Saumon cru|200|20|0|13
+Saumon fumé|180|22|0|10
+Cabillaud cru|80|18|0|0.8
+Colin / lieu cru|80|18|0|0.9
+Thon au naturel égoutté|116|26|0|1
+Thon à l'huile égoutté|190|26|0|9.5
+Sardines à l'huile égouttées|210|24|0|12.5
+Maquereau au vin blanc|180|15|2|12.5
+Crevettes cuites|95|21|0|1
+Surimi|105|8|15|1.5
+Poisson pané cuit|220|13|18|10.5
+Nuggets de poulet cuits|260|15|17|15
+Cordon bleu cuit|250|14|15|15
+Œuf entier|140|12.5|0.5|9.8
+Blanc d'œuf|48|11|0.7|0.2
+Lait demi-écrémé|46|3.3|4.8|1.6
+Lait écrémé|34|3.4|4.9|0.1
+Lait entier|64|3.2|4.7|3.6
+Boisson au soja nature|40|3.3|1|2
+Fromage blanc 0 %|47|7.5|4|0.1
+Fromage blanc 3 %|75|7|4|3.2
+Skyr nature|63|11|4|0.2
+Yaourt nature|60|4.2|5|3
+Yaourt aux fruits|95|3.5|14|2.5
+Yaourt à la grecque|120|4|4|10
+Petit-suisse nature|110|9|3.5|7
+Cottage cheese|98|11|3.4|4.3
+Emmental|380|28|0|30
+Comté|410|27|0|34
+Mozzarella|250|18|2|19
+Feta|265|15|1|22
+Camembert|290|20|0.5|23
+Raclette (fromage)|340|23|0|27
+Fromage à tartiner|240|7|4|22
+Beurre|740|0.7|0.6|82
+Crème fraîche 30 %|300|2.3|3|30
+Crème fraîche légère 15 %|165|2.7|4|15
+Pomme de terre crue|80|2|17|0.1
+Pomme de terre cuite à l'eau|85|2|18|0.1
+Pommes de terre sautées|150|2.5|20|6.5
+Frites au four (cuites)|200|3|30|7
+Frites (friteuse)|300|3.5|36|15
+Purée maison|105|2|13|5
+Patate douce crue|86|1.6|20|0.1
+Riz blanc cru|355|7|78|0.6
+Riz blanc cuit|130|2.7|28|0.3
+Riz complet cuit|125|2.7|25|1
+Pâtes crues|355|12.5|71|1.5
+Pâtes cuites|150|5.5|30|0.9
+Pâtes complètes cuites|140|5.5|27|1.2
+Semoule cuite|115|4|23|0.5
+Quinoa cuit|120|4.4|21|1.9
+Boulgour cuit|105|3.5|20|0.5
+Gnocchis|150|3.5|32|0.4
+Lentilles sèches|340|24|50|1.5
+Lentilles cuites|116|9|17|0.4
+Pois chiches cuits|140|8|19|2.6
+Haricots rouges cuits|115|8.5|15|0.5
+Flocons d'avoine|370|13.5|58.7|7
+Baguette|270|9|55|1.5
+Pain complet|240|9|44|2.5
+Pain de mie|265|8|48|4
+Pain de mie complet|250|9|42|4.5
+Pain burger|275|9|48|5
+Biscottes|410|12|72|6.5
+Corn flakes|380|7|84|1
+Muesli|370|10|62|7
+Céréales chocolatées|390|8|75|5
+Wrap / tortilla de blé|300|8.5|50|7
+Haricots verts|30|2|4|0.2
+Brocoli|34|2.8|4.5|0.4
+Courgette|17|1.2|2|0.3
+Carotte|36|0.8|7|0.2
+Tomate|18|0.9|3|0.2
+Concombre|12|0.7|2|0.1
+Salade verte|15|1.3|1.5|0.2
+Poivron|27|0.9|5|0.3
+Champignons de Paris|22|3|0.5|0.3
+Épinards|23|2.9|1.5|0.4
+Chou-fleur|25|2|3|0.3
+Oignon|40|1.2|8|0.2
+Petits pois|80|5.5|10|0.4
+Maïs doux en boîte|100|3|16|1.5
+Poêlée de légumes surgelés|35|1.8|5|0.5
+Ratatouille|60|1.2|6|3.5
+Tomates concassées en boîte|25|1.2|4|0.2
+Avocat|160|2|2|15
+Banane|89|1.1|20|0.3
+Pomme|52|0.3|12|0.2
+Poire|55|0.4|13|0.1
+Orange|47|0.9|9|0.1
+Clémentine|47|0.8|10|0.2
+Kiwi|61|1|11|0.5
+Fraises|32|0.7|6|0.3
+Raisin|70|0.7|16|0.2
+Ananas|50|0.5|12|0.1
+Mangue|60|0.8|14|0.4
+Fruits rouges surgelés|40|1|7|0.3
+Compote sans sucres ajoutés|60|0.3|13|0.1
+Dattes|280|2.5|65|0.4
+Raisins secs|300|3|70|0.5
+Huile d'olive|900|0|0|100
+Huile de colza|900|0|0|100
+Beurre de cacahuète|600|25|15|50
+Amandes|600|21|10|50
+Noix|690|15|7|65
+Noix de cajou|590|18|27|46
+Cacahuètes grillées|600|25|12|49
+Mayonnaise|700|1.5|2|75
+Ketchup|110|1.5|25|0.2
+Vinaigrette|450|0.5|5|47
+Chocolat noir 70 %|580|8|35|42
+Chocolat au lait|540|7|57|31
+Pâte à tartiner chocolat-noisette|540|6|57|31
+Confiture|250|0.5|60|0
+Miel|320|0.5|80|0
+Sucre|400|0|100|0
+Biscuits secs type petit-beurre|440|7|75|11
+Croissant|410|8|45|21
+Pain au chocolat|420|7.5|47|22
+Glace à la vanille|200|3.5|24|10
+Chips|540|6|50|34
+Soda type cola|42|0|10.6|0
+Soda zéro|1|0|0|0
+Jus d'orange|45|0.7|10|0.1
+Bière|43|0.4|3.5|0
+Vin rouge|70|0.1|0.3|0
+Pizza margherita|250|10|30|9.5
+Pizza 4 fromages|280|12|28|13
+Lasagnes bolognaise|150|7.5|13|7.5
+Cheeseburger|265|14|28|11
+Kebab (sandwich)|230|11|23|10
+Tacos français|260|11|25|13
+Sandwich jambon-beurre|290|12|35|11
+Quiche lorraine|270|9|18|18
+Taboulé|160|3.5|22|6.5
+Hachis parmentier|120|6.5|9|6.5
+Couscous (plat complet)|140|8|15|5
+Chili con carne|115|8|9|5
+Sushi / maki|150|5|28|1.5
+Soupe de légumes|35|1|5|1.2
+Protéine en poudre (whey)|375|75|8|5
+Barre protéinée|360|30|35|12
+`.trim().split("\n").map((line) => {
+  const [name, kcal, p, c, f] = line.split("|");
+  return { name, kcal: +kcal, p: +p, c: +c, f: +f, src: "Base" };
+});
+const FOOD_DB = FOOD_DB_RAW;
+const RECENT_FOODS_KEY = STORAGE_PREFIX + ":recentFoods";
+const OFF_FIELDS = "code,product_name,product_name_fr,brands,nutriments";
 
 function normalizeFood(r) {
   return {
@@ -1040,19 +1205,148 @@ function normalizeFood(r) {
   };
 }
 
-function initFoodBase() {
-  $("foodBase").innerHTML = `<option value="">— Saisie libre —</option>` +
-    FOOD_DB.map((f, i) => ({ f, i }))
-      .sort((a, b) => a.f.name.localeCompare(b.f.name, "fr"))
-      .map(({ f, i }) => `<option value="${i}">${esc(f.name)}</option>`).join("");
+function normText(s) {
+  return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/œ/g, "oe");
+}
+
+function loadRecentFoods() {
+  try {
+    const list = JSON.parse(localStorage.getItem(RECENT_FOODS_KEY) || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveRecentFood(food) {
+  try {
+    const list = loadRecentFoods().filter((f) => normText(f.name) !== normText(food.name));
+    list.unshift({ name: food.name, kcal: food.kcal, p: food.p, c: food.c, f: food.f, src: food.src });
+    localStorage.setItem(RECENT_FOODS_KEY, JSON.stringify(list.slice(0, 40)));
+  } catch (err) {
+    console.warn(err);
+  }
+}
+
+// Recherche dans les aliments récents puis la base intégrée (tous les mots doivent apparaître).
+function searchLocalFoods(query) {
+  const words = normText(query).split(/\s+/).filter(Boolean);
+  const recent = loadRecentFoods().map((f) => ({ ...f, recent: true }));
+  if (!words.length) return recent.slice(0, 8);
+  const seen = new Set();
+  const out = [];
+  for (const f of recent.concat(FOOD_DB)) {
+    const n = normText(f.name);
+    if (seen.has(n) || !words.every((w) => n.includes(w))) continue;
+    seen.add(n);
+    out.push(f);
+  }
+  return out.slice(0, 15);
+}
+
+function renderFoodResults(list, message) {
+  state.foodResults = list;
+  const el = $("foodResults");
+  el.innerHTML = (message ? `<p class="hint">${esc(message)}</p>` : "") + list.map((f, i) => `
+    <button type="button" class="result" data-food-index="${i}">
+      <span class="main"><span class="name">${esc(f.name)}</span>
+        <span class="sub"> · 100 g : ${fmt(f.kcal, 0)} kcal · P ${fmt(f.p)} · G ${fmt(f.c)} · L ${fmt(f.f)}</span></span>
+      <span class="src">${f.recent ? "récent" : esc(f.src === "Base" ? "base" : "marque")}</span>
+    </button>`).join("");
+}
+
+let foodSearchTimer = null;
+function onFoodSearchInput() {
+  clearTimeout(foodSearchTimer);
+  foodSearchTimer = setTimeout(() => {
+    const q = $("foodSearch").value.trim();
+    const list = searchLocalFoods(q);
+    renderFoodResults(list, q && !list.length
+      ? "Rien dans la base intégrée : essaie la recherche des produits de marque ci-dessous."
+      : (!q && list.length ? "Aliments récents :" : ""));
+  }, 120);
+}
+
+function offToFood(p) {
+  const n = p.nutriments || {};
+  let kcal = Number(n["energy-kcal_100g"]);
+  if (!isFinite(kcal) && isFinite(Number(n["energy_100g"]))) kcal = Number(n["energy_100g"]) / 4.184;
+  const val = (k) => (isFinite(Number(n[k])) ? Number(n[k]) : 0);
+  const name = String(p.product_name_fr || p.product_name || "").trim();
+  if (!name || !isFinite(kcal)) return null;
+  const brand = String(p.brands || "").split(",")[0].trim();
+  return {
+    name: brand ? `${name} (${brand})` : name,
+    kcal: round1(kcal), p: round1(val("proteins_100g")), c: round1(val("carbohydrates_100g")), f: round1(val("fat_100g")),
+    src: "Open Food Facts",
+  };
+}
+
+async function searchFoodsOnline() {
+  const q = $("foodSearch").value.trim();
+  if (q.length < 2) return toast("Tape d'abord le nom du produit (ex. « skyr Lidl »).", "error");
+  clearTimeout(foodSearchTimer); // évite que la recherche locale n'écrase les résultats
+  const btn = $("foodOnlineBtn");
+  btn.disabled = true;
+  renderFoodResults([], "Recherche en cours…");
+  try {
+    const url = "https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=24" +
+      "&lc=fr&cc=fr&fields=" + OFF_FIELDS + "&search_terms=" + encodeURIComponent(q);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Open Food Facts indisponible (code " + res.status + ")");
+    const data = await res.json();
+    const list = (data.products || []).map(offToFood).filter(Boolean);
+    renderFoodResults(list, list.length ? `${list.length} produit(s) trouvé(s) sur Open Food Facts :` : "Aucun produit trouvé. Essaie un autre nom ou le code-barres.");
+  } catch (err) {
+    renderFoodResults([], "Recherche impossible : " + errorText(err) + ". Réessaie dans une minute.");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function lookupBarcode() {
+  const code = $("foodBarcode").value.replace(/\D/g, "");
+  if (code.length < 8) return toast("Code-barres invalide (8 à 14 chiffres).", "error");
+  const btn = $("foodBarcodeBtn");
+  btn.disabled = true;
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`);
+    const data = res.ok ? await res.json() : null;
+    const food = data && data.product ? offToFood(data.product) : null;
+    if (!food) {
+      renderFoodResults([], "Produit introuvable sur Open Food Facts : saisis les valeurs de l'étiquette à la main.");
+      return;
+    }
+    selectFood(food);
+    $("foodBarcode").value = "";
+  } catch (err) {
+    toast("Recherche impossible : " + errorText(err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function selectFood(food) {
+  state.selectedFood = food;
+  renderFoodResults([], "");
+  $("foodSearch").value = "";
+  $("foodSelected").innerHTML = `<div class="selected"><strong>${esc(food.name)}</strong><br>
+    Pour 100 g : ${fmt(food.kcal, 0)} kcal · P ${fmt(food.p)} g · G ${fmt(food.c)} g · L ${fmt(food.f)} g
+    <span class="hint">(${esc(food.src === "Base" ? "base intégrée" : food.src)})</span></div>`;
+  prefillFood();
+  $("foodQty").focus();
+}
+
+function clearSelectedFood() {
+  state.selectedFood = null;
+  $("foodSelected").innerHTML = "";
 }
 
 function prefillFood() {
-  const idx = $("foodBase").value;
-  if (idx === "") return;
-  const food = FOOD_DB[Number(idx)];
+  const food = state.selectedFood;
+  if (!food) return;
   const qty = inputNum($("foodQty"));
-  if (!food || !isFinite(qty) || qty < 0) return;
+  if (!isFinite(qty) || qty < 0) return;
   const k = qty / 100;
   $("foodName").value = `${food.name} (${fmt(qty, 0)} g)`;
   $("foodKcal").value = round1(food.kcal * k);
@@ -1079,8 +1373,11 @@ async function onFoodSubmit(e) {
       state.foods.push(normalizeFood(saved));
       state.foods.sort(byTs);
     }
+    if (state.selectedFood) saveRecentFood(state.selectedFood);
     $("foodForm").reset();
     $("foodQty").value = 100;
+    clearSelectedFood();
+    renderFoodResults([], "");
     toast("Aliment ajouté", "ok");
     renderAll();
   } catch (err) {
@@ -1977,7 +2274,16 @@ function bindUI() {
   });
   $("recordClose").addEventListener("click", () => { $("recordBanner").hidden = true; });
   $("weightForm").addEventListener("submit", onWeightSubmit);
-  $("foodBase").addEventListener("change", prefillFood);
+  $("foodSearch").addEventListener("input", onFoodSearchInput);
+  $("foodSearch").addEventListener("focus", onFoodSearchInput);
+  $("foodSearch").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); searchFoodsOnline(); }
+  });
+  $("foodOnlineBtn").addEventListener("click", searchFoodsOnline);
+  $("foodBarcodeBtn").addEventListener("click", lookupBarcode);
+  $("foodBarcode").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); lookupBarcode(); }
+  });
   $("foodQty").addEventListener("input", prefillFood);
   $("foodForm").addEventListener("submit", onFoodSubmit);
   $("profileForm").addEventListener("submit", onProfileSubmit);
@@ -1989,6 +2295,8 @@ function bindUI() {
   document.addEventListener("click", (e) => {
     const del = e.target.closest("[data-del]");
     if (del) { e.preventDefault(); onDeleteClick(del); return; }
+    const pick = e.target.closest("[data-food-index]");
+    if (pick) { const f = state.foodResults[Number(pick.dataset.foodIndex)]; if (f) selectFood(f); return; }
     const go = e.target.closest("[data-goto]");
     if (go) { showTab(go.dataset.goto); window.scrollTo(0, 0); return; }
     if (e.target.closest("#weightShowAll")) { state.showAllWeights = true; renderWeights(); }
@@ -2009,7 +2317,6 @@ function bindUI() {
 
 function boot() {
   injectAppleIcon();
-  initFoodBase();
   bindUI();
   try {
     const saved = localStorage.getItem(STORAGE_PREFIX + ":tab");
