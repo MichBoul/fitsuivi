@@ -110,25 +110,9 @@ details.ex[open] summary::after{transform:rotate(90deg)}
 /* Graphiques */
 canvas.chart{display:block;width:100%;height:230px;margin-top:6px}
 
-/* Recherche d'aliments */
-.results{margin:6px 0 8px}
-.result{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:8px 10px;margin-top:6px;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:10px;color:var(--text);font:inherit;cursor:pointer}
-.result:active{border-color:var(--accent)}
-.result .main{flex:1;min-width:0}
-.result .name{font-weight:600;font-size:15px}
-.result .sub{font-size:12px;color:var(--muted)}
-.result .src{font-size:11px;color:var(--muted);flex:none}
-.inline{display:flex;gap:8px}
-.inline .btn{width:auto;flex:none}
-.selected{background:rgba(79,140,255,.10);border:1px solid rgba(79,140,255,.4);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
-
-/* Barres de progression */
-.progress{margin-bottom:12px}
-.progress .head{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:4px}
-.bar{height:12px;background:var(--surface2);border-radius:6px;overflow:hidden}
-.bar>span{display:block;height:100%;background:var(--ok);border-radius:6px;transition:width .3s}
-.progress.over .bar>span{background:var(--danger)}
-.progress.over .head .val{color:var(--danger);font-weight:600}
+/* Silhouette */
+.silhouette{display:flex;justify-content:center;background:var(--surface2);border-radius:12px;padding:8px}
+.silhouette svg{width:100%;max-width:240px;height:auto;display:block}
 
 /* Besoins */
 .big{font-size:32px;font-weight:800;line-height:1.1}
@@ -204,9 +188,12 @@ nav.tabbar button.active .ic{filter:none;opacity:1}
         <h2>Nouvelle série</h2>
         <form id="setForm" autocomplete="off">
           <div class="field">
-            <label for="setExercise">Exercice</label>
-            <input id="setExercise" list="exerciseList" required maxlength="80" autocapitalize="sentences">
-            <datalist id="exerciseList"></datalist>
+            <label for="setExerciseSelect">Exercice</label>
+            <select id="setExerciseSelect" required></select>
+          </div>
+          <div class="field" id="customExerciseField" hidden>
+            <label for="setExerciseCustom">Nom de l'exercice personnalisé</label>
+            <input id="setExerciseCustom" maxlength="80" autocapitalize="sentences" autocomplete="off">
           </div>
           <div class="grid2">
             <div class="field">
@@ -280,55 +267,82 @@ nav.tabbar button.active .ic{filter:none;opacity:1}
       </div>
     </section>
 
-    <!-- ALIMENTATION -->
-    <section class="tab" id="tab-alim" data-title="Alimentation">
+    <!-- ACTIVITÉ -->
+    <section class="tab" id="tab-activite" data-title="Activité">
+      <div id="actMissing" class="alert warn" hidden>La table « daily_activity » n'existe pas encore : exécute le script SQL de mise à jour dans Supabase, puis recharge l'app.</div>
       <div class="card">
-        <h2 id="foodDayTitle">Aujourd'hui</h2>
-        <div id="foodProgress"></div>
-      </div>
-      <div class="card">
-        <h2>Ajouter un aliment</h2>
-        <form id="foodForm" autocomplete="off">
+        <h2>Ma journée</h2>
+        <form id="activityForm" autocomplete="off">
           <div class="field">
-            <label for="foodSearch">Chercher un aliment</label>
-            <input id="foodSearch" type="search" autocomplete="off" enterkeyhint="search" placeholder="poulet, skyr, pain de mie…">
-            <div id="foodResults" class="results"></div>
-            <button type="button" class="btn secondary" id="foodOnlineBtn">🔎 Chercher les produits de marque (Open Food Facts)</button>
+            <label for="actDate">Date</label>
+            <input id="actDate" type="date" required>
           </div>
           <div class="field">
-            <label for="foodBarcode">… ou code-barres du paquet</label>
-            <div class="inline">
-              <input id="foodBarcode" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="3017620422003">
-              <button type="button" class="btn secondary" id="foodBarcodeBtn">OK</button>
-            </div>
-          </div>
-          <div id="foodSelected"></div>
-          <div class="field">
-            <label for="foodQty">Quantité (g)</label>
-            <input id="foodQty" type="number" inputmode="decimal" step="any" min="0" value="100">
-          </div>
-          <div class="field">
-            <label for="foodName">Nom</label>
-            <input id="foodName" required maxlength="100">
+            <label for="actSteps">Nombre de pas</label>
+            <input id="actSteps" type="number" inputmode="numeric" step="1" min="0" max="200000">
           </div>
           <div class="grid2">
-            <div class="field"><label for="foodKcal">Calories (kcal)</label><input id="foodKcal" type="number" inputmode="decimal" step="any" min="0"></div>
-            <div class="field"><label for="foodProtein">Protéines (g)</label><input id="foodProtein" type="number" inputmode="decimal" step="any" min="0"></div>
-            <div class="field"><label for="foodCarbs">Glucides (g)</label><input id="foodCarbs" type="number" inputmode="decimal" step="any" min="0"></div>
-            <div class="field"><label for="foodFat">Lipides (g)</label><input id="foodFat" type="number" inputmode="decimal" step="any" min="0"></div>
+            <div class="field">
+              <label for="actSleepH">Sommeil (heures)</label>
+              <input id="actSleepH" type="number" inputmode="numeric" step="1" min="0" max="24">
+            </div>
+            <div class="field">
+              <label for="actSleepM">… et minutes</label>
+              <input id="actSleepM" type="number" inputmode="numeric" step="1" min="0" max="59">
+            </div>
           </div>
-          <button class="btn" type="submit" id="foodSubmit">Ajouter</button>
-          <p class="hint">Valeurs indicatives (base intégrée type Ciqual, ou Open Food Facts pour les produits de marque) : vérifie l'étiquette en cas de doute.</p>
+          <div class="field">
+            <label for="actQuality">Qualité du sommeil (facultatif)</label>
+            <select id="actQuality">
+              <option value="">Non renseignée</option>
+              <option value="1">1 — très mauvaise</option>
+              <option value="2">2 — mauvaise</option>
+              <option value="3">3 — correcte</option>
+              <option value="4">4 — bonne</option>
+              <option value="5">5 — excellente</option>
+            </select>
+          </div>
+          <button class="btn" type="submit" id="actSubmit">Enregistrer la journée</button>
+          <p class="hint" id="actFormHint"></p>
         </form>
       </div>
       <div class="card">
-        <h2>Aliments du jour</h2>
-        <div id="foodList"></div>
+        <h2>Mon avancement</h2>
+        <p class="hint" id="actGoalsInfo"></p>
+        <div id="actSummary"></div>
+        <h3>Pas · 30 derniers jours</h3>
+        <canvas id="stepsChart" class="chart"></canvas>
+        <h3>Sommeil (heures) · 30 derniers jours</h3>
+        <canvas id="sleepChart" class="chart"></canvas>
+        <details class="box">
+          <summary>Modifier mes objectifs</summary>
+          <form id="goalsForm">
+            <div class="field">
+              <label for="goalSteps">Objectif de pas par jour</label>
+              <input id="goalSteps" type="number" inputmode="numeric" step="1" min="1" max="100000" required>
+            </div>
+            <div class="grid2">
+              <div class="field"><label for="goalSleepH">Sommeil (heures)</label><input id="goalSleepH" type="number" inputmode="numeric" step="1" min="0" max="24" required></div>
+              <div class="field"><label for="goalSleepM">… et minutes</label><input id="goalSleepM" type="number" inputmode="numeric" step="1" min="0" max="59" required></div>
+            </div>
+            <button class="btn secondary" type="submit">Enregistrer les objectifs</button>
+          </form>
+        </details>
+      </div>
+      <div class="card">
+        <h2>Historique</h2>
+        <div id="actHistory"></div>
       </div>
     </section>
 
     <!-- PROFIL -->
     <section class="tab" id="tab-profil" data-title="Profil">
+      <div class="card">
+        <h2>Ma silhouette</h2>
+        <div id="silhouette" class="silhouette"></div>
+        <p class="small" id="silhouetteInfo" style="text-align:center;margin:10px 0 2px"></p>
+        <p class="hint" style="text-align:center">Représentation indicative basée sur la taille et le poids.</p>
+      </div>
       <div class="card" id="needsCard"></div>
       <div class="card">
         <h2>Mon profil</h2>
@@ -387,42 +401,13 @@ nav.tabbar button.active .ic{filter:none;opacity:1}
       </div>
     </section>
 
-    <!-- IMPORT -->
-    <section class="tab" id="tab-import" data-title="Import">
-      <div class="card">
-        <h2>Importer depuis Huawei Santé</h2>
-        <p class="small muted">Huawei Santé n'a pas d'API publique : l'import se fait à partir d'un export de tes données (fichier CSV ou JSON). Le fichier est lu uniquement sur cet appareil ; seules les pesées sont enregistrées, les pas et calories sont seulement affichés.</p>
-        <h3>Obtenir l'export</h3>
-        <ol class="steps">
-          <li>Ouvre les réglages de ton <strong>compte HUAWEI</strong> (Paramètres du téléphone → ton nom / Compte HUAWEI, ou l'espace « Compte HUAWEI » sur le web).</li>
-          <li>Va dans <strong>Confidentialité</strong> (parfois « Centre de confidentialité » ou « Gestion des données »), puis choisis <strong>Demander une copie de vos données</strong> / « Télécharger vos données ».</li>
-          <li>Coche <strong>Santé</strong> (Huawei Santé / Health) et valide. Un mot de passe peut être demandé pour protéger l'archive : note-le.</li>
-          <li>Quand l'export est prêt (notification ou e-mail, parfois après quelques jours), télécharge l'archive ZIP et décompresse-la avec ce mot de passe.</li>
-          <li>Repère le fichier CSV ou JSON qui contient les données de santé (poids) et sélectionne-le ci-dessous.</li>
-        </ol>
-        <p class="hint">Le chemin exact dans les menus peut varier selon la version de Huawei Santé, d'EMUI/HarmonyOS et le pays.</p>
-      </div>
-      <div class="card">
-        <h2>Fichier</h2>
-        <div class="field">
-          <label for="importFile">Fichier CSV ou JSON</label>
-          <input id="importFile" type="file" accept=".csv,.json,.txt,text/csv,application/json,text/plain">
-        </div>
-        <div id="importPreview"></div>
-        <div class="btn-row" id="importActions" hidden>
-          <button class="btn secondary" type="button" id="importCancel">Annuler</button>
-          <button class="btn" type="button" id="importConfirm">Importer</button>
-        </div>
-      </div>
-    </section>
   </main>
 
   <nav class="tabbar" aria-label="Navigation principale">
     <button type="button" data-tab="sport"><span class="ic">🏋️</span>Sport</button>
     <button type="button" data-tab="poids"><span class="ic">⚖️</span>Poids</button>
-    <button type="button" data-tab="alim"><span class="ic">🍽️</span>Alimentation</button>
+    <button type="button" data-tab="activite"><span class="ic">👟</span>Activité</button>
     <button type="button" data-tab="profil"><span class="ic">👤</span>Profil</button>
-    <button type="button" data-tab="import"><span class="ic">📥</span>Import</button>
   </nav>
 </div>
 
@@ -449,17 +434,15 @@ const state = {
   user: null,
   sets: [],
   weights: [],
-  foods: [],
-  foodsDay: null,
+  activity: [],
+  activityMissing: false,
   profile: null,
   selectedExercise: "",
   showAllWeights: false,
   currentTab: "sport",
   lastLoad: 0,
   loadingPromise: null,
-  importPending: null,
-  selectedFood: null,
-  foodResults: [],
+  showAllActivity: false,
 };
 let sb = null; // client Supabase, créé au démarrage
 
@@ -509,6 +492,7 @@ function handleSignedIn(user) {
   showApp();
   $("accountEmail").textContent = user.email || "";
   $("weightDate").value = todayStr();
+  $("actDate").value = todayStr();
   showTab(state.currentTab);
   loadAll();
 }
@@ -517,9 +501,8 @@ function handleSignedOut() {
   state.user = null;
   state.sets = [];
   state.weights = [];
-  state.foods = [];
+  state.activity = [];
   state.profile = null;
-  state.importPending = null;
   $("profileForm").reset();
   showLogin();
 }
@@ -581,19 +564,6 @@ async function loadProfile() {
   return data ? applyLocalOptional("profile", [data])[0] : null;
 }
 
-async function loadFoodsToday() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const rows = await fetchAll("foods", (q) => q
-    .gte("created_at", start.toISOString())
-    .lt("created_at", end.toISOString())
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true }));
-  state.foods = rows.map(normalizeFood).sort(byTs);
-  state.foodsDay = dayKey(start);
-}
-
 async function reloadWeights() {
   const rows = await fetchAll("weights", (q) => q.order("created_at", { ascending: true }).order("id", { ascending: true }));
   state.weights = rows.map(normalizeWeight).sort(byTs);
@@ -611,7 +581,7 @@ async function loadAll(opts = {}) {
       ]);
       state.sets = applyLocalOptional("sets", sets).map(normalizeSet).sort(byTs);
       state.profile = profile;
-      await loadFoodsToday();
+      await loadActivity();
       state.lastLoad = Date.now();
       if (!opts.silent) fillProfileForm();
       renderAll();
@@ -724,6 +694,57 @@ async function deleteRow(table, id) {
 }
 
 // ---------- SPORT ----------
+// Exercices prédéfinis, groupés par zone.
+const EXERCISE_GROUPS = [
+  ["Pectoraux", ["Développé couché", "Développé couché haltères", "Développé incliné", "Développé incliné haltères",
+    "Développé décliné", "Écarté couché haltères", "Écarté à la poulie (vis-à-vis)", "Pec deck", "Pompes", "Dips"]],
+  ["Dos", ["Tractions", "Tractions supination", "Tirage vertical (poulie haute)", "Tirage horizontal (poulie basse)",
+    "Rowing barre", "Rowing haltère un bras", "Rowing machine", "Soulevé de terre", "Pull-over à la poulie", "Shrugs"]],
+  ["Épaules", ["Développé militaire", "Développé haltères assis", "Élévations latérales", "Élévations frontales",
+    "Oiseau (élévations arrière)", "Face pull", "Rowing menton"]],
+  ["Bras", ["Curl biceps barre", "Curl biceps haltères", "Curl marteau", "Curl pupitre", "Curl à la poulie",
+    "Extensions triceps à la poulie", "Barre au front", "Extensions triceps au-dessus de la tête", "Kickback triceps",
+    "Développé couché prise serrée"]],
+  ["Jambes", ["Squat", "Front squat", "Presse à cuisses", "Fentes", "Fentes bulgares", "Hack squat",
+    "Leg extension", "Leg curl allongé", "Leg curl assis", "Soulevé de terre jambes tendues", "Pont fessier",
+    "Mollets debout", "Mollets assis", "Abducteurs (machine)", "Adducteurs (machine)", "Goblet squat"]],
+  ["Abdos", ["Crunch", "Crunch à la poulie", "Gainage (planche)", "Relevés de jambes", "Russian twist", "Roue abdominale"]],
+  ["Cardio", ["Tapis de course", "Vélo", "Rameur", "Elliptique", "Corde à sauter", "Marche inclinée"]],
+];
+const PREDEFINED_EXERCISES = EXERCISE_GROUPS.flatMap((g) => g[1]);
+const CUSTOM_EXERCISE = "__custom__";
+
+// Menu déroulant : « Mes exercices » (noms personnalisés déjà utilisés), groupes prédéfinis, puis « Autre ».
+function renderExerciseSelect(names) {
+  const sel = $("setExerciseSelect");
+  const current = sel.value === CUSTOM_EXERCISE ? CUSTOM_EXERCISE : (state.formExercise || sel.value || "");
+  const known = new Set(PREDEFINED_EXERCISES.map((n) => n.toLowerCase()));
+  const mine = names.filter((n) => !known.has(n.toLowerCase())).sort((a, b) => a.localeCompare(b, "fr"));
+  const opt = (n) => `<option value="${esc(n)}">${esc(n)}</option>`;
+  sel.innerHTML = `<option value="">Choisir un exercice…</option>` +
+    (mine.length ? `<optgroup label="Mes exercices">${mine.map(opt).join("")}</optgroup>` : "") +
+    EXERCISE_GROUPS.map(([label, list]) => `<optgroup label="${esc(label)}">${list.map(opt).join("")}</optgroup>`).join("") +
+    `<option value="${CUSTOM_EXERCISE}">➕ Autre (nom personnalisé)…</option>`;
+  setExerciseSelectValue(current);
+}
+
+// Sélectionne l'option correspondante sans tenir compte de la casse (« squat » → « Squat »).
+function setExerciseSelectValue(name) {
+  const sel = $("setExerciseSelect");
+  const target = String(name || "").toLowerCase();
+  const match = [...sel.options].find((o) => o.value.toLowerCase() === target);
+  sel.value = match ? match.value : "";
+  $("customExerciseField").hidden = sel.value !== CUSTOM_EXERCISE;
+}
+
+function onExerciseSelectChange() {
+  const custom = $("setExerciseSelect").value === CUSTOM_EXERCISE;
+  $("customExerciseField").hidden = !custom;
+  $("setExerciseCustom").required = custom;
+  if (custom) $("setExerciseCustom").focus();
+  else state.formExercise = $("setExerciseSelect").value;
+}
+
 function normalizeSet(r) {
   return {
     id: r.id,
@@ -832,7 +853,9 @@ function sportChartPoints(name) {
 
 async function onSetSubmit(e) {
   e.preventDefault();
-  const exercise = canonicalExercise($("setExercise").value);
+  const sel = $("setExerciseSelect").value;
+  const isCustom = sel === CUSTOM_EXERCISE;
+  const exercise = canonicalExercise(isCustom ? $("setExerciseCustom").value : sel);
   const weight = inputNum($("setWeight"));
   const reps = Math.round(inputNum($("setReps")));
   const rirValue = $("setRir").value;
@@ -851,7 +874,11 @@ async function onSetSubmit(e) {
     state.sets.push(normalizeSet(row));
     state.sets.sort(byTs);
     state.selectedExercise = exercise;
-    $("setExercise").value = exercise;
+    if (isCustom) {
+      $("setExerciseCustom").value = "";
+      $("customExerciseField").hidden = true;
+    }
+    state.formExercise = exercise;
     if (messages.length) showRecord(messages);
     else {
       $("recordBanner").hidden = true;
@@ -877,7 +904,7 @@ function showRecord(messages) {
 
 function renderSport() {
   const names = exerciseNames();
-  $("exerciseList").innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join("");
+  renderExerciseSelect(names);
   if (!names.includes(state.selectedExercise)) state.selectedExercise = names[0] || "";
   const sel = $("exSelect");
   sel.innerHTML = names.length
@@ -1016,420 +1043,6 @@ function drawWeightChart() {
     y: w.weight,
     xLabel: shortDay(dayKey(w.ts)),
   })), { timeScale: true, emptyText: "Aucune pesée", unit: "kg" });
-}
-
-// ---------- ALIMENTATION ----------
-// Base intégrée : valeurs indicatives pour 100 g (type table Ciqual).
-// Format : "Nom|kcal|protéines|glucides|lipides"
-const FOOD_DB_RAW = `
-Blanc de poulet cru|110|23|0|1.8
-Blanc de poulet cuit|165|31|0|3.6
-Haut de cuisse de poulet sans peau cru|120|19|0|5
-Pilon de poulet cuit (sans os)|185|27|0|8.5
-Poulet rôti avec peau (sans os)|215|25|0|13
-Escalope de dinde crue|105|23|0|1.5
-Steak haché 5 % cru|125|21|0|5
-Steak haché 15 % cru|215|18|0|15.5
-Bœuf rumsteck cru|120|22|0|3.5
-Bœuf haché 20 % cru|250|17|0|20
-Filet mignon de porc cru|120|22|0|3.5
-Côte de porc crue|190|19|0|12.5
-Jambon blanc|115|21|1|3
-Jambon cru|245|27|0.5|15
-Blanc de dinde en tranches|105|21|1|1.8
-Lardons|270|15|0.5|23
-Saucisse de Toulouse crue|270|15|1|23
-Merguez crue|295|15|1|26
-Chorizo|450|24|2|39
-Saucisson sec|420|26|2|34
-Saumon cru|200|20|0|13
-Saumon fumé|180|22|0|10
-Cabillaud cru|80|18|0|0.8
-Colin / lieu cru|80|18|0|0.9
-Thon au naturel égoutté|116|26|0|1
-Thon à l'huile égoutté|190|26|0|9.5
-Sardines à l'huile égouttées|210|24|0|12.5
-Maquereau au vin blanc|180|15|2|12.5
-Crevettes cuites|95|21|0|1
-Surimi|105|8|15|1.5
-Poisson pané cuit|220|13|18|10.5
-Nuggets de poulet cuits|260|15|17|15
-Cordon bleu cuit|250|14|15|15
-Œuf entier|140|12.5|0.5|9.8
-Blanc d'œuf|48|11|0.7|0.2
-Lait demi-écrémé|46|3.3|4.8|1.6
-Lait écrémé|34|3.4|4.9|0.1
-Lait entier|64|3.2|4.7|3.6
-Boisson au soja nature|40|3.3|1|2
-Fromage blanc 0 %|47|7.5|4|0.1
-Fromage blanc 3 %|75|7|4|3.2
-Skyr nature|63|11|4|0.2
-Yaourt nature|60|4.2|5|3
-Yaourt aux fruits|95|3.5|14|2.5
-Yaourt à la grecque|120|4|4|10
-Petit-suisse nature|110|9|3.5|7
-Cottage cheese|98|11|3.4|4.3
-Emmental|380|28|0|30
-Comté|410|27|0|34
-Mozzarella|250|18|2|19
-Feta|265|15|1|22
-Camembert|290|20|0.5|23
-Raclette (fromage)|340|23|0|27
-Fromage à tartiner|240|7|4|22
-Beurre|740|0.7|0.6|82
-Crème fraîche 30 %|300|2.3|3|30
-Crème fraîche légère 15 %|165|2.7|4|15
-Pomme de terre crue|80|2|17|0.1
-Pomme de terre cuite à l'eau|85|2|18|0.1
-Pommes de terre sautées|150|2.5|20|6.5
-Frites au four (cuites)|200|3|30|7
-Frites (friteuse)|300|3.5|36|15
-Purée maison|105|2|13|5
-Patate douce crue|86|1.6|20|0.1
-Riz blanc cru|355|7|78|0.6
-Riz blanc cuit|130|2.7|28|0.3
-Riz complet cuit|125|2.7|25|1
-Pâtes crues|355|12.5|71|1.5
-Pâtes cuites|150|5.5|30|0.9
-Pâtes complètes cuites|140|5.5|27|1.2
-Semoule cuite|115|4|23|0.5
-Quinoa cuit|120|4.4|21|1.9
-Boulgour cuit|105|3.5|20|0.5
-Gnocchis|150|3.5|32|0.4
-Lentilles sèches|340|24|50|1.5
-Lentilles cuites|116|9|17|0.4
-Pois chiches cuits|140|8|19|2.6
-Haricots rouges cuits|115|8.5|15|0.5
-Flocons d'avoine|370|13.5|58.7|7
-Baguette|270|9|55|1.5
-Pain complet|240|9|44|2.5
-Pain de mie|265|8|48|4
-Pain de mie complet|250|9|42|4.5
-Pain burger|275|9|48|5
-Biscottes|410|12|72|6.5
-Corn flakes|380|7|84|1
-Muesli|370|10|62|7
-Céréales chocolatées|390|8|75|5
-Wrap / tortilla de blé|300|8.5|50|7
-Haricots verts|30|2|4|0.2
-Brocoli|34|2.8|4.5|0.4
-Courgette|17|1.2|2|0.3
-Carotte|36|0.8|7|0.2
-Tomate|18|0.9|3|0.2
-Concombre|12|0.7|2|0.1
-Salade verte|15|1.3|1.5|0.2
-Poivron|27|0.9|5|0.3
-Champignons de Paris|22|3|0.5|0.3
-Épinards|23|2.9|1.5|0.4
-Chou-fleur|25|2|3|0.3
-Oignon|40|1.2|8|0.2
-Petits pois|80|5.5|10|0.4
-Maïs doux en boîte|100|3|16|1.5
-Poêlée de légumes surgelés|35|1.8|5|0.5
-Ratatouille|60|1.2|6|3.5
-Tomates concassées en boîte|25|1.2|4|0.2
-Avocat|160|2|2|15
-Banane|89|1.1|20|0.3
-Pomme|52|0.3|12|0.2
-Poire|55|0.4|13|0.1
-Orange|47|0.9|9|0.1
-Clémentine|47|0.8|10|0.2
-Kiwi|61|1|11|0.5
-Fraises|32|0.7|6|0.3
-Raisin|70|0.7|16|0.2
-Ananas|50|0.5|12|0.1
-Mangue|60|0.8|14|0.4
-Fruits rouges surgelés|40|1|7|0.3
-Compote sans sucres ajoutés|60|0.3|13|0.1
-Dattes|280|2.5|65|0.4
-Raisins secs|300|3|70|0.5
-Huile d'olive|900|0|0|100
-Huile de colza|900|0|0|100
-Beurre de cacahuète|600|25|15|50
-Amandes|600|21|10|50
-Noix|690|15|7|65
-Noix de cajou|590|18|27|46
-Cacahuètes grillées|600|25|12|49
-Mayonnaise|700|1.5|2|75
-Ketchup|110|1.5|25|0.2
-Vinaigrette|450|0.5|5|47
-Chocolat noir 70 %|580|8|35|42
-Chocolat au lait|540|7|57|31
-Pâte à tartiner chocolat-noisette|540|6|57|31
-Confiture|250|0.5|60|0
-Miel|320|0.5|80|0
-Sucre|400|0|100|0
-Biscuits secs type petit-beurre|440|7|75|11
-Croissant|410|8|45|21
-Pain au chocolat|420|7.5|47|22
-Glace à la vanille|200|3.5|24|10
-Chips|540|6|50|34
-Soda type cola|42|0|10.6|0
-Soda zéro|1|0|0|0
-Jus d'orange|45|0.7|10|0.1
-Bière|43|0.4|3.5|0
-Vin rouge|70|0.1|0.3|0
-Pizza margherita|250|10|30|9.5
-Pizza 4 fromages|280|12|28|13
-Lasagnes bolognaise|150|7.5|13|7.5
-Cheeseburger|265|14|28|11
-Kebab (sandwich)|230|11|23|10
-Tacos français|260|11|25|13
-Sandwich jambon-beurre|290|12|35|11
-Quiche lorraine|270|9|18|18
-Taboulé|160|3.5|22|6.5
-Hachis parmentier|120|6.5|9|6.5
-Couscous (plat complet)|140|8|15|5
-Chili con carne|115|8|9|5
-Sushi / maki|150|5|28|1.5
-Soupe de légumes|35|1|5|1.2
-Protéine en poudre (whey)|375|75|8|5
-Barre protéinée|360|30|35|12
-`.trim().split("\n").map((line) => {
-  const [name, kcal, p, c, f] = line.split("|");
-  return { name, kcal: +kcal, p: +p, c: +c, f: +f, src: "Base" };
-});
-const FOOD_DB = FOOD_DB_RAW;
-const RECENT_FOODS_KEY = STORAGE_PREFIX + ":recentFoods";
-const OFF_FIELDS = "code,product_name,product_name_fr,brands,nutriments";
-
-function normalizeFood(r) {
-  return {
-    id: r.id,
-    ts: parseTs(r.created_at),
-    name: String(r.name || ""),
-    kcal: Number(r.kcal) || 0,
-    protein: Number(r.protein) || 0,
-    carbs: Number(r.carbs) || 0,
-    fat: Number(r.fat) || 0,
-  };
-}
-
-function normText(s) {
-  return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/œ/g, "oe");
-}
-
-function loadRecentFoods() {
-  try {
-    const list = JSON.parse(localStorage.getItem(RECENT_FOODS_KEY) || "[]");
-    return Array.isArray(list) ? list : [];
-  } catch (err) {
-    return [];
-  }
-}
-
-function saveRecentFood(food) {
-  try {
-    const list = loadRecentFoods().filter((f) => normText(f.name) !== normText(food.name));
-    list.unshift({ name: food.name, kcal: food.kcal, p: food.p, c: food.c, f: food.f, src: food.src });
-    localStorage.setItem(RECENT_FOODS_KEY, JSON.stringify(list.slice(0, 40)));
-  } catch (err) {
-    console.warn(err);
-  }
-}
-
-// Recherche dans les aliments récents puis la base intégrée (tous les mots doivent apparaître).
-function searchLocalFoods(query) {
-  const words = normText(query).split(/\s+/).filter(Boolean);
-  const recent = loadRecentFoods().map((f) => ({ ...f, recent: true }));
-  if (!words.length) return recent.slice(0, 8);
-  const seen = new Set();
-  const out = [];
-  for (const f of recent.concat(FOOD_DB)) {
-    const n = normText(f.name);
-    if (seen.has(n) || !words.every((w) => n.includes(w))) continue;
-    seen.add(n);
-    out.push(f);
-  }
-  return out.slice(0, 15);
-}
-
-function renderFoodResults(list, message) {
-  state.foodResults = list;
-  const el = $("foodResults");
-  el.innerHTML = (message ? `<p class="hint">${esc(message)}</p>` : "") + list.map((f, i) => `
-    <button type="button" class="result" data-food-index="${i}">
-      <span class="main"><span class="name">${esc(f.name)}</span>
-        <span class="sub"> · 100 g : ${fmt(f.kcal, 0)} kcal · P ${fmt(f.p)} · G ${fmt(f.c)} · L ${fmt(f.f)}</span></span>
-      <span class="src">${f.recent ? "récent" : esc(f.src === "Base" ? "base" : "marque")}</span>
-    </button>`).join("");
-}
-
-let foodSearchTimer = null;
-function onFoodSearchInput() {
-  clearTimeout(foodSearchTimer);
-  foodSearchTimer = setTimeout(() => {
-    const q = $("foodSearch").value.trim();
-    const list = searchLocalFoods(q);
-    renderFoodResults(list, q && !list.length
-      ? "Rien dans la base intégrée : essaie la recherche des produits de marque ci-dessous."
-      : (!q && list.length ? "Aliments récents :" : ""));
-  }, 120);
-}
-
-function offToFood(p) {
-  const n = p.nutriments || {};
-  let kcal = Number(n["energy-kcal_100g"]);
-  if (!isFinite(kcal) && isFinite(Number(n["energy_100g"]))) kcal = Number(n["energy_100g"]) / 4.184;
-  const val = (k) => (isFinite(Number(n[k])) ? Number(n[k]) : 0);
-  const name = String(p.product_name_fr || p.product_name || "").trim();
-  if (!name || !isFinite(kcal)) return null;
-  const brand = String(p.brands || "").split(",")[0].trim();
-  return {
-    name: brand ? `${name} (${brand})` : name,
-    kcal: round1(kcal), p: round1(val("proteins_100g")), c: round1(val("carbohydrates_100g")), f: round1(val("fat_100g")),
-    src: "Open Food Facts",
-  };
-}
-
-async function searchFoodsOnline() {
-  const q = $("foodSearch").value.trim();
-  if (q.length < 2) return toast("Tape d'abord le nom du produit (ex. « skyr Lidl »).", "error");
-  clearTimeout(foodSearchTimer); // évite que la recherche locale n'écrase les résultats
-  const btn = $("foodOnlineBtn");
-  btn.disabled = true;
-  renderFoodResults([], "Recherche en cours…");
-  try {
-    const url = "https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=24" +
-      "&lc=fr&cc=fr&fields=" + OFF_FIELDS + "&search_terms=" + encodeURIComponent(q);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Open Food Facts indisponible (code " + res.status + ")");
-    const data = await res.json();
-    const list = (data.products || []).map(offToFood).filter(Boolean);
-    renderFoodResults(list, list.length ? `${list.length} produit(s) trouvé(s) sur Open Food Facts :` : "Aucun produit trouvé. Essaie un autre nom ou le code-barres.");
-  } catch (err) {
-    renderFoodResults([], "Recherche impossible : " + errorText(err) + ". Réessaie dans une minute.");
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-async function lookupBarcode() {
-  const code = $("foodBarcode").value.replace(/\D/g, "");
-  if (code.length < 8) return toast("Code-barres invalide (8 à 14 chiffres).", "error");
-  const btn = $("foodBarcodeBtn");
-  btn.disabled = true;
-  try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`);
-    const data = res.ok ? await res.json() : null;
-    const food = data && data.product ? offToFood(data.product) : null;
-    if (!food) {
-      renderFoodResults([], "Produit introuvable sur Open Food Facts : saisis les valeurs de l'étiquette à la main.");
-      return;
-    }
-    selectFood(food);
-    $("foodBarcode").value = "";
-  } catch (err) {
-    toast("Recherche impossible : " + errorText(err), "error");
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function selectFood(food) {
-  state.selectedFood = food;
-  renderFoodResults([], "");
-  $("foodSearch").value = "";
-  $("foodSelected").innerHTML = `<div class="selected"><strong>${esc(food.name)}</strong><br>
-    Pour 100 g : ${fmt(food.kcal, 0)} kcal · P ${fmt(food.p)} g · G ${fmt(food.c)} g · L ${fmt(food.f)} g
-    <span class="hint">(${esc(food.src === "Base" ? "base intégrée" : food.src)})</span></div>`;
-  prefillFood();
-  $("foodQty").focus();
-}
-
-function clearSelectedFood() {
-  state.selectedFood = null;
-  $("foodSelected").innerHTML = "";
-}
-
-function prefillFood() {
-  const food = state.selectedFood;
-  if (!food) return;
-  const qty = inputNum($("foodQty"));
-  if (!isFinite(qty) || qty < 0) return;
-  const k = qty / 100;
-  $("foodName").value = `${food.name} (${fmt(qty, 0)} g)`;
-  $("foodKcal").value = round1(food.kcal * k);
-  $("foodProtein").value = round1(food.p * k);
-  $("foodCarbs").value = round1(food.c * k);
-  $("foodFat").value = round1(food.f * k);
-}
-
-async function onFoodSubmit(e) {
-  e.preventDefault();
-  const name = $("foodName").value.trim();
-  const val = (id) => {
-    const n = inputNum($(id));
-    return isFinite(n) && n > 0 ? round1(n) : 0;
-  };
-  if (!name) return toast("Indique un nom d'aliment.", "error");
-  const row = { name, kcal: val("foodKcal"), protein: val("foodProtein"), carbs: val("foodCarbs"), fat: val("foodFat") };
-  const btn = $("foodSubmit");
-  btn.disabled = true;
-  try {
-    const saved = await saveWithOptionalColumns("foods", "insert", row);
-    if (state.foodsDay !== todayStr()) await loadFoodsToday();
-    else {
-      state.foods.push(normalizeFood(saved));
-      state.foods.sort(byTs);
-    }
-    if (state.selectedFood) saveRecentFood(state.selectedFood);
-    $("foodForm").reset();
-    $("foodQty").value = 100;
-    clearSelectedFood();
-    renderFoodResults([], "");
-    toast("Aliment ajouté", "ok");
-    renderAll();
-  } catch (err) {
-    toast("Erreur : " + errorText(err), "error");
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function progressRow(label, total, target, unit) {
-  const over = total > target + 1e-9;
-  const pct = target > 0 ? (total / target) * 100 : (total > 0 ? 100 : 0);
-  return `<div class="progress${over ? " over" : ""}">
-    <div class="head"><span>${label}</span><span class="val">${fmt(total, 0)} / ${fmt(target, 0)} ${unit}${over ? " · dépassé" : ""}</span></div>
-    <div class="bar"><span style="width:${Math.min(100, pct).toFixed(1)}%"></span></div>
-  </div>`;
-}
-
-function renderFoods() {
-  $("foodDayTitle").textContent = "Aujourd'hui · " + dayLabel(todayStr());
-  const totals = state.foods.reduce((t, f) => ({
-    kcal: t.kcal + f.kcal, protein: t.protein + f.protein, carbs: t.carbs + f.carbs, fat: t.fat + f.fat,
-  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
-
-  const needs = currentNeeds();
-  const prog = $("foodProgress");
-  if (needs.ok) {
-    prog.innerHTML =
-      progressRow("Calories", totals.kcal, needs.calories, "kcal") +
-      progressRow("Protéines", totals.protein, needs.protein, "g") +
-      progressRow("Glucides", totals.carbs, needs.carbs, "g") +
-      progressRow("Lipides", totals.fat, needs.fat, "g");
-  } else {
-    prog.innerHTML = `<div class="stats">
-        ${statHtml("Calories", fmt(totals.kcal, 0) + " kcal")}
-        ${statHtml("Protéines", fmt(totals.protein, 0) + " g")}
-        ${statHtml("Glucides", fmt(totals.carbs, 0) + " g")}
-        ${statHtml("Lipides", fmt(totals.fat, 0) + " g")}
-      </div>
-      <div class="alert info">Complète ton profil et ajoute une pesée pour comparer ces totaux à tes cibles.
-        <div class="btn-row"><button type="button" class="btn secondary" data-goto="profil">Profil</button><button type="button" class="btn secondary" data-goto="poids">Pesée</button></div></div>`;
-  }
-
-  const list = $("foodList");
-  list.innerHTML = state.foods.length
-    ? state.foods.map((f) => `
-      <div class="item">
-        <div class="main"><strong>${esc(f.name)}</strong>
-          <div class="sub">${fmt(f.kcal, 0)} kcal · P ${fmt(f.protein)} g · G ${fmt(f.carbs)} g · L ${fmt(f.fat)} g · ${timeLabel(f.ts)}</div></div>
-        <button type="button" class="icon-btn" data-del="foods" data-id="${esc(String(f.id))}" aria-label="Supprimer l'aliment">🗑</button>
-      </div>`).join("")
-    : `<p class="empty">Rien d'enregistré aujourd'hui.</p>`;
 }
 
 // ---------- PROFIL / BESOINS ----------
@@ -1619,348 +1232,325 @@ function renderNeeds() {
     </ul></div>`;
 }
 
-// ---------- IMPORT ----------
-const IMPORT_EXCLUDE = ["fat", "bmi", "imc", "muscle", "water", "eau", "bone", "os", "target", "goal", "objectif",
-  "cible", "unit", "unite", "gras", "grasse", "graisse", "visceral", "protein", "proteine", "change", "variation",
-  "delta", "diff", "ecart", "min", "max", "avg", "moyenne"];
-const IMPORT_TYPE_KEYS = ["key", "type", "name", "nom", "data type", "datatype", "data name", "metric", "category",
-  "sample type", "field", "indicator", "indicateur", "type de donnee", "mesure type"];
-const IMPORT_VALUE_KEYS = ["value", "val", "valeur", "amount", "quantity", "qty", "data value", "montant"];
+// ---------- ACTIVITÉ ----------
+const ACTIVITY_GOALS_KEY = STORAGE_PREFIX + ":activityGoals";
+const DEFAULT_GOALS = { steps: 8000, sleep: 450 }; // 450 min = 7 h 30
 
-function normKey(k) {
-  return String(k)
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-// Reconnaît un champ par son nom (FR/EN, insensible à la casse et aux accents).
-function classifyName(name) {
-  const n = normKey(name);
-  const t = n.split(" ");
-  const has = (w) => t.includes(w);
-  if (IMPORT_EXCLUDE.some(has)) return null;
-  if (has("weight") || has("poids") || n.includes("bodyweight") || n.includes("body weight")) return "weight";
-  if (has("steps") || has("step") || has("pas") || n.includes("stepcount")) return "steps";
-  if (has("calories") || has("calorie") || has("kcal") || has("cal") || n.includes("calorie")) return "calories";
-  return null;
-}
-
-function dateScore(name) {
-  const t = normKey(name).split(" ");
-  if (t.some((w) => ["date", "datetime", "timestamp", "horodatage"].includes(w))) return 3;
-  if (t.includes("start") || t.includes("debut")) return 2;
-  if (t.some((w) => ["time", "heure", "jour", "day", "mesure", "measured", "recorded", "created"].includes(w))) return 1;
-  if (t.includes("end") || t.includes("fin")) return 0.5;
-  return 0;
-}
-
-function parseTimeOfDay(v) {
-  const m = String(v).trim().match(/^(\d{1,2})[:h](\d{2})(?::(\d{2}))?$/i);
-  if (!m || +m[1] > 23 || +m[2] > 59) return null;
-  return { h: +m[1], mi: +m[2], s: m[3] ? +m[3] : 0 };
-}
-
-function localDate(y, mo, d, h, mi, s) {
-  const date = new Date(y, mo - 1, d, h, mi, s);
-  if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) return null;
-  return date;
-}
-
-// Accepte : timestamp (ms ou s), AAAAMMJJ, AAAA-MM-JJ[ HH:MM[:SS]][Z|±HH:MM], JJ/MM/AAAA[ HH:MM], puis Date.parse.
-function parseDateValue(v) {
-  if (v === null || v === undefined || v === "" || typeof v === "boolean") return null;
-  const s = String(v).trim();
-  let d = null;
-  let hasTime = true;
-  let m;
-  if (/^\d{8}$/.test(s)) {
-    d = localDate(+s.slice(0, 4), +s.slice(4, 6), +s.slice(6, 8), 12, 0, 0);
-    hasTime = false;
-  } else if (/^\d{9,13}(\.\d+)?$/.test(s)) {
-    const n = Number(s);
-    if (n >= 1e11) d = new Date(n);            // millisecondes
-    else if (n >= 1e9) d = new Date(n * 1000); // secondes
-  } else if ((m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/i))) {
-    if (m[7] && m[4]) {
-      const tz = m[7].toUpperCase() === "Z" ? "Z" : m[7].replace(/^([+-]\d{2}):?(\d{2})$/, "$1:$2");
-      d = new Date(`${m[1]}-${pad2(m[2])}-${pad2(m[3])}T${pad2(m[4])}:${m[5]}:${pad2(m[6] || 0)}${tz}`);
-    } else {
-      d = localDate(+m[1], +m[2], +m[3], m[4] ? +m[4] : 12, m[5] ? +m[5] : 0, m[6] ? +m[6] : 0);
-      hasTime = !!m[4];
-    }
-  } else if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})(?:[ T,]+(\d{1,2})[:h](\d{2})(?::(\d{2}))?)?/i))) {
-    let a = +m[1];
-    let b = +m[2];
-    let y = +m[3];
-    if (y < 100) y += 2000;
-    let day = a;
-    let month = b;
-    if (a <= 12 && b > 12) { day = b; month = a; } // format américain évident
-    d = localDate(y, month, day, m[4] ? +m[4] : 12, m[5] ? +m[5] : 0, m[6] ? +m[6] : 0);
-    hasTime = !!m[4];
-  } else if (/[a-z]/i.test(s) && /\d{4}/.test(s)) {
-    const t = Date.parse(s);
-    if (!isNaN(t)) d = new Date(t);
-  }
-  if (!d || isNaN(d.getTime())) return null;
-  const year = d.getFullYear();
-  if (year < 1990 || year > 2100) return null;
-  return { date: d, hasTime };
-}
-
-function recordFromObject(obj) {
-  const rec = { date: null, weight: null, steps: null, calories: null };
-  let bestDate = null;
-  let bestScore = 0;
-  let timeOfDay = null;
-  let lb = false;
-  let typeName = null;
-  let typeValue;
-  for (const [k, v] of Object.entries(obj)) {
-    if (v === null || typeof v === "object") continue;
-    const nk = normKey(k);
-    if (IMPORT_TYPE_KEYS.includes(nk) && typeof v === "string") { typeName = v; continue; }
-    if (IMPORT_VALUE_KEYS.includes(nk)) { typeValue = v; continue; }
-    if (["unit", "unite", "units"].includes(nk)) { if (/^lbs?$/i.test(String(v).trim())) lb = true; continue; }
-    const kind = classifyName(k);
-    if (kind) {
-      const n = parseNum(v);
-      if (isFinite(n)) {
-        rec[kind] = n;
-        if (kind === "weight" && /\blbs?\b/.test(nk)) lb = true;
-      }
-      continue;
-    }
-    const score = dateScore(k);
-    if (score > 0) {
-      const tod = parseTimeOfDay(v);
-      if (tod) { timeOfDay = tod; continue; }
-      const pd = parseDateValue(v);
-      if (pd && score > bestScore) { bestDate = pd; bestScore = score; }
-    }
-  }
-  // Motif « clé / valeur » (ex. { type: "weight", value: 75.2, startTime: ... }).
-  if (typeName !== null && typeValue !== undefined) {
-    const kind = classifyName(typeName);
-    const n = parseNum(typeValue);
-    if (kind && isFinite(n) && rec[kind] === null) rec[kind] = n;
-  }
-  if (bestDate) {
-    const d = new Date(bestDate.date.getTime());
-    if (!bestDate.hasTime && timeOfDay) d.setHours(timeOfDay.h, timeOfDay.mi, timeOfDay.s, 0);
-    rec.date = d;
-  }
-  if (rec.weight !== null) {
-    if (lb) rec.weight *= 0.45359237;
-    rec.weight = rec.weight >= 20 && rec.weight <= 400 ? round2(rec.weight) : null;
-  }
-  if (rec.steps !== null && rec.steps < 0) rec.steps = null;
-  if (rec.calories !== null && rec.calories < 0) rec.calories = null;
-  return rec;
-}
-
-function hasImportData(r) {
-  return r.weight !== null || r.steps !== null || r.calories !== null;
-}
-
-// Parcourt un JSON quelconque ; la date d'un objet parent sert de date par défaut à ses enfants.
-function walkJson(node, ctxDate, out) {
-  if (Array.isArray(node)) {
-    for (const n of node) walkJson(n, ctxDate, out);
-    return;
-  }
-  if (!node || typeof node !== "object") return;
-  const rec = recordFromObject(node);
-  const date = rec.date || ctxDate;
-  if (hasImportData(rec)) out.push({ ...rec, date });
-  for (const v of Object.values(node)) {
-    if (v && typeof v === "object") walkJson(v, date, out);
-  }
-}
-
-function countOutsideQuotes(line, ch) {
-  let n = 0;
-  let inQ = false;
-  for (const c of line) {
-    if (c === '"') inQ = !inQ;
-    else if (c === ch && !inQ) n++;
-  }
-  return n;
-}
-
-function parseCSV(text) {
-  text = text.replace(/^\uFEFF/, "");
-  const firstLine = text.split(/\r?\n/).find((l) => l.trim()) || "";
-  let delim = ",";
-  let best = -1;
-  for (const d of [",", ";", "\t", "|"]) {
-    const c = countOutsideQuotes(firstLine, d);
-    if (c > best) { best = c; delim = d; }
-  }
-  const rows = [];
-  let row = [];
-  let field = "";
-  let inQ = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inQ) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false;
-      } else field += ch;
-    } else if (ch === '"') inQ = true;
-    else if (ch === delim) { row.push(field); field = ""; }
-    else if (ch === "\n" || ch === "\r") {
-      if (ch === "\r" && text[i + 1] === "\n") i++;
-      row.push(field); rows.push(row); row = []; field = "";
-    } else field += ch;
-  }
-  if (field !== "" || row.length) { row.push(field); rows.push(row); }
-  const lines = rows.filter((r) => r.some((c) => c.trim() !== ""));
-  if (lines.length < 2) return [];
-  const headers = lines[0].map((h) => h.trim());
-  return lines.slice(1).map((r) => {
-    const o = {};
-    headers.forEach((h, i) => { if (h) o[h] = (r[i] === undefined ? "" : r[i]).trim(); });
-    return o;
-  });
-}
-
-function weightDupKey(ts, weight) {
-  return dayKey(ts) + "|" + Math.round(weight * 100);
-}
-
-function analyzeImportText(text, fileName) {
-  const records = [];
-  const trimmed = text.replace(/^\uFEFF/, "").trim();
-  let format = null;
-  if (/\.json$/i.test(fileName) || /^[[{]/.test(trimmed)) {
-    try {
-      walkJson(JSON.parse(trimmed), null, records);
-      format = "JSON";
-    } catch (err) {
-      if (/\.json$/i.test(fileName)) throw new Error("JSON invalide : " + err.message);
-    }
-  }
-  if (!format) {
-    for (const o of parseCSV(text)) {
-      const r = recordFromObject(o);
-      if (hasImportData(r)) records.push(r);
-    }
-    format = "CSV";
-  }
-
-  const weightRecs = records.filter((r) => r.weight !== null && r.date).sort((a, b) => a.date - b.date);
-  const undated = records.filter((r) => r.weight !== null && !r.date).length;
-  const existing = new Set(state.weights.map((w) => weightDupKey(w.ts, w.weight)));
-  const seen = new Set();
-  const toImport = [];
-  let duplicates = 0;
-  for (const r of weightRecs) {
-    const k = weightDupKey(r.date.getTime(), r.weight);
-    if (existing.has(k) || seen.has(k)) { duplicates++; continue; }
-    seen.add(k);
-    toImport.push({ weight: r.weight, date: r.date });
-  }
-  const stepsRecs = records.filter((r) => r.steps !== null);
-  const calRecs = records.filter((r) => r.calories !== null);
-  const datedAll = records.filter((r) => r.date).map((r) => r.date.getTime());
-  const rangeSrc = weightRecs.length ? weightRecs.map((r) => r.date.getTime()) : datedAll;
+function normalizeActivity(r) {
+  const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
   return {
-    format,
-    recordCount: records.length,
-    weightCount: weightRecs.length,
-    undated,
-    duplicates,
-    toImport,
-    rangeStart: rangeSrc.length ? Math.min(...rangeSrc) : null,
-    rangeEnd: rangeSrc.length ? Math.max(...rangeSrc) : null,
-    stepsTotal: stepsRecs.length ? stepsRecs.reduce((s, r) => s + r.steps, 0) : null,
-    caloriesTotal: calRecs.length ? calRecs.reduce((s, r) => s + r.calories, 0) : null,
+    id: r.id,
+    day: String(r.day || "").slice(0, 10),
+    steps: num(r.steps),
+    sleep: num(r.sleep_minutes),
+    quality: num(r.sleep_quality),
   };
 }
 
-function onImportFile(e) {
-  const file = e.target.files && e.target.files[0];
-  state.importPending = null;
-  $("importActions").hidden = true;
-  if (!file) { $("importPreview").innerHTML = ""; return; }
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const a = analyzeImportText(String(reader.result || ""), file.name);
-      state.importPending = a.toImport;
-      renderImportPreview(a, file.name);
-    } catch (err) {
-      $("importPreview").innerHTML = `<div class="alert error">${esc(errorText(err))}</div>`;
-    }
-  };
-  reader.onerror = () => {
-    $("importPreview").innerHTML = `<div class="alert error">Lecture du fichier impossible.</div>`;
-  };
-  reader.readAsText(file);
+function byDay(a, b) {
+  return a.day < b.day ? -1 : a.day > b.day ? 1 : 0;
 }
 
-function renderImportPreview(a, fileName) {
-  const range = a.rangeStart === null ? "—"
-    : a.rangeStart === a.rangeEnd ? dayLabel(dayKey(a.rangeStart))
-    : `du ${dayLabel(dayKey(a.rangeStart))} au ${dayLabel(dayKey(a.rangeEnd))}`;
-  const sample = a.toImport.slice(-5).reverse().map((r) =>
-    `<div class="item"><div class="main"><strong>${fmt(r.weight, 2)} kg</strong><div class="sub">${esc(dayLabel(dayKey(r.date)))} · ${timeLabel(r.date.getTime())}</div></div></div>`).join("");
-  let html = `<p class="small muted">${esc(fileName)} · format ${a.format} · ${a.recordCount} enregistrement(s) exploitable(s)</p>
-    <div class="stats">
-      ${statHtml("Pesées détectées", String(a.weightCount))}
-      ${statHtml("À importer", String(a.toImport.length), a.duplicates ? `${a.duplicates} doublon(s) ignoré(s)` : "aucun doublon")}
-      ${statHtml("Plage de dates", range)}
-      ${a.stepsTotal !== null ? statHtml("Pas (total du fichier)", fmt(a.stepsTotal, 0), "affiché seulement") : ""}
-      ${a.caloriesTotal !== null ? statHtml("Calories (total du fichier)", fmt(a.caloriesTotal, 0), "affiché seulement") : ""}
-    </div>`;
-  if (a.undated) html += `<div class="alert warn">${a.undated} pesée(s) sans date reconnue seront ignorées.</div>`;
-  if (a.toImport.length) {
-    html += `<h3>Dernières pesées à importer</h3>${sample}`;
-  } else {
-    html += `<div class="alert info">${a.weightCount ? "Toutes les pesées du fichier sont déjà présentes." : "Aucune pesée reconnue dans ce fichier (colonnes attendues : date/heure/timestamp et poids/weight)."}</div>`;
-  }
-  $("importPreview").innerHTML = html;
-  $("importConfirm").textContent = `Importer ${a.toImport.length} pesée(s)`;
-  $("importActions").hidden = !a.toImport.length;
-}
-
-function resetImport() {
-  state.importPending = null;
-  $("importFile").value = "";
-  $("importPreview").innerHTML = "";
-  $("importActions").hidden = true;
-}
-
-async function confirmImport() {
-  const rows = state.importPending;
-  if (!rows || !rows.length) return;
-  const btn = $("importConfirm");
-  btn.disabled = true;
-  let inserted = 0;
+// Table absente (script SQL pas encore exécuté) : l'app continue de fonctionner.
+async function loadActivity() {
   try {
-    for (let i = 0; i < rows.length; i += 500) {
-      const chunk = rows.slice(i, i + 500).map((r) => ({ weight: r.weight, created_at: r.date.toISOString() }));
-      const { error } = await sb.from("weights").insert(chunk);
-      if (error) throw error;
-      inserted += chunk.length;
-    }
-    toast(`${inserted} pesée(s) importée(s)`, "ok");
-    resetImport();
+    const rows = await fetchAll("daily_activity", (q) => q.order("day", { ascending: true }));
+    state.activity = rows.map(normalizeActivity).sort(byDay);
+    state.activityMissing = false;
   } catch (err) {
-    toast(`Import interrompu après ${inserted} pesée(s) : ${errorText(err)}`, "error");
+    console.warn("Table daily_activity indisponible", err);
+    state.activity = [];
+    state.activityMissing = true;
+  }
+}
+
+function loadGoals() {
+  try {
+    const g = JSON.parse(localStorage.getItem(ACTIVITY_GOALS_KEY) || "null");
+    return {
+      steps: g && g.steps > 0 ? Number(g.steps) : DEFAULT_GOALS.steps,
+      sleep: g && g.sleep > 0 ? Number(g.sleep) : DEFAULT_GOALS.sleep,
+    };
+  } catch (err) {
+    return { ...DEFAULT_GOALS };
+  }
+}
+
+function saveGoals(goals) {
+  try {
+    localStorage.setItem(ACTIVITY_GOALS_KEY, JSON.stringify(goals));
+  } catch (err) {
+    console.warn(err);
+  }
+}
+
+function sleepText(min) {
+  if (min === null || min === undefined || !isFinite(min)) return "—";
+  const m = Math.round(min);
+  return `${Math.floor(m / 60)} h ${pad2(m % 60)}`;
+}
+
+function shiftDay(key, delta) {
+  const [y, m, d] = key.split("-").map(Number);
+  return dayKey(new Date(y, m - 1, d + delta));
+}
+
+function activityInLastDays(n) {
+  const from = shiftDay(todayStr(), -(n - 1));
+  return state.activity.filter((a) => a.day >= from && a.day <= todayStr());
+}
+
+function average(values) {
+  const v = values.filter((x) => x !== null && isFinite(x));
+  return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null;
+}
+
+function fillGoalsForm() {
+  const g = loadGoals();
+  $("goalSteps").value = g.steps;
+  $("goalSleepH").value = Math.floor(g.sleep / 60);
+  $("goalSleepM").value = g.sleep % 60;
+}
+
+function onGoalsSubmit(e) {
+  e.preventDefault();
+  const steps = Math.round(inputNum($("goalSteps")));
+  const h = Math.round(inputNum($("goalSleepH")) || 0);
+  const m = Math.round(inputNum($("goalSleepM")) || 0);
+  const sleep = h * 60 + m;
+  if (!(steps > 0 && steps <= 100000)) return toast("Objectif de pas invalide.", "error");
+  if (!(sleep > 0 && sleep <= 1440)) return toast("Objectif de sommeil invalide.", "error");
+  saveGoals({ steps, sleep });
+  toast("Objectifs enregistrés", "ok");
+  renderActivity();
+  renderCharts();
+}
+
+function fillActivityFormForDay() {
+  const day = $("actDate").value || todayStr();
+  const entry = state.activity.find((a) => a.day === day);
+  $("actFormHint").textContent = entry
+    ? `Déjà enregistré ce jour-là : ${entry.steps === null ? "pas —" : fmt(entry.steps, 0) + " pas"} · sommeil ${sleepText(entry.sleep)}. Un champ laissé vide garde la valeur existante.`
+    : "";
+}
+
+async function onActivitySubmit(e) {
+  e.preventDefault();
+  const day = $("actDate").value || todayStr();
+  if (day > todayStr()) return toast("La date ne peut pas être dans le futur.", "error");
+  const stepsRaw = $("actSteps").value.trim();
+  const hRaw = $("actSleepH").value.trim();
+  const mRaw = $("actSleepM").value.trim();
+  const qualityRaw = $("actQuality").value;
+
+  // Seuls les champs remplis sont envoyés : un champ vide n'efface pas la valeur existante.
+  const payload = { user_id: state.user.id, day };
+  if (stepsRaw !== "") {
+    const steps = Math.round(inputNum($("actSteps")));
+    if (!(steps >= 0 && steps <= 200000)) return toast("Nombre de pas invalide.", "error");
+    payload.steps = steps;
+  }
+  if (hRaw !== "" || mRaw !== "") {
+    const h = hRaw === "" ? 0 : Math.round(inputNum($("actSleepH")));
+    const m = mRaw === "" ? 0 : Math.round(inputNum($("actSleepM")));
+    if (!(h >= 0 && h <= 24 && m >= 0 && m <= 59)) return toast("Durée de sommeil invalide.", "error");
+    const total = h * 60 + m;
+    if (total > 1440) return toast("Le sommeil ne peut pas dépasser 24 h.", "error");
+    payload.sleep_minutes = total;
+  }
+  if (qualityRaw !== "") payload.sleep_quality = Number(qualityRaw);
+  if (Object.keys(payload).length === 2) return toast("Renseigne au moins les pas ou le sommeil.", "error");
+
+  const btn = $("actSubmit");
+  btn.disabled = true;
+  try {
+    const { data, error } = await sb.from("daily_activity")
+      .upsert(payload, { onConflict: "user_id,day" })
+      .select()
+      .single();
+    if (error) throw error;
+    const row = normalizeActivity(data);
+    const i = state.activity.findIndex((a) => a.day === row.day);
+    if (i >= 0) state.activity[i] = row; else state.activity.push(row);
+    state.activity.sort(byDay);
+    state.activityMissing = false;
+    $("actSteps").value = "";
+    $("actSleepH").value = "";
+    $("actSleepM").value = "";
+    $("actQuality").value = "";
+    $("actDate").value = todayStr();
+    toast(i >= 0 ? "Journée mise à jour" : "Journée enregistrée", "ok");
+    renderAll();
+  } catch (err) {
+    toast("Erreur : " + errorText(err), "error");
   } finally {
     btn.disabled = false;
-    try { await reloadWeights(); } catch (err) { console.warn(err); }
-    renderAll();
   }
+}
+
+function renderActivity() {
+  fillActivityFormForDay();
+  $("actMissing").hidden = !state.activityMissing;
+  const g = loadGoals();
+  $("actGoalsInfo").textContent = `Objectifs : ${fmt(g.steps, 0)} pas · ${sleepText(g.sleep)} de sommeil`;
+
+  const last7 = activityInLastDays(7);
+  const last30 = activityInLastDays(30);
+  const withSteps = state.activity.filter((a) => a.steps !== null);
+  const best = withSteps.reduce((b, a) => (!b || a.steps > b.steps ? a : b), null);
+  const stepsOk30 = last30.filter((a) => a.steps !== null && a.steps >= g.steps).length;
+  const sleepOk30 = last30.filter((a) => a.sleep !== null && a.sleep >= g.sleep).length;
+  const s7 = average(last7.map((a) => a.steps));
+  const s30 = average(last30.map((a) => a.steps));
+  const z7 = average(last7.map((a) => a.sleep));
+  const z30 = average(last30.map((a) => a.sleep));
+
+  $("actSummary").innerHTML = state.activity.length
+    ? `<div class="stats">
+        ${statHtml("Pas · moyenne 7 j", s7 === null ? "—" : fmt(s7, 0), "30 j : " + (s30 === null ? "—" : fmt(s30, 0)))}
+        ${statHtml("Sommeil · moyenne 7 j", sleepText(z7), "30 j : " + sleepText(z30))}
+        ${statHtml("Meilleur jour de pas", best ? fmt(best.steps, 0) : "—", best ? esc(dayLabel(best.day)) : "")}
+        ${statHtml("Objectifs atteints (30 j)", `${stepsOk30} j pas`, `${sleepOk30} j sommeil`)}
+      </div>`
+    : `<p class="empty">Aucune journée enregistrée. Saisis tes pas et ton sommeil ci-dessus.</p>`;
+
+  const hist = $("actHistory");
+  if (!state.activity.length) {
+    hist.innerHTML = `<p class="empty">Aucune journée enregistrée.</p>`;
+    return;
+  }
+  const desc = state.activity.slice().reverse();
+  const limit = state.showAllActivity ? desc.length : Math.min(desc.length, 40);
+  hist.innerHTML = desc.slice(0, limit).map((a) => `
+    <div class="item">
+      <div class="main"><strong>${esc(dayLabel(a.day))}</strong>
+        <div class="sub">👣 ${a.steps === null ? "—" : fmt(a.steps, 0) + " pas"} · 😴 ${sleepText(a.sleep)}${a.quality === null ? "" : ` · qualité ${a.quality}/5`}</div></div>
+      <button type="button" class="icon-btn" data-del="daily_activity" data-id="${esc(String(a.id))}" aria-label="Supprimer la journée">🗑</button>
+    </div>`).join("") +
+    (limit < desc.length ? `<button type="button" class="btn secondary" id="actShowAll" style="margin-top:10px">Afficher tout (${desc.length})</button>` : "");
+}
+
+function drawActivityCharts() {
+  const g = loadGoals();
+  const days = [];
+  for (let i = 29; i >= 0; i--) days.push(shiftDay(todayStr(), -i));
+  const map = new Map(state.activity.map((a) => [a.day, a]));
+  drawBarChart($("stepsChart"), days.map((d) => ({
+    xLabel: shortDay(d),
+    y: map.has(d) ? map.get(d).steps : null,
+  })), { goal: g.steps, emptyText: "Aucun pas saisi sur 30 jours" });
+  drawLineChart($("sleepChart"), days.filter((d) => map.has(d) && map.get(d).sleep !== null).map((d) => {
+    const [y, m, dd] = d.split("-").map(Number);
+    return { x: new Date(y, m - 1, dd).getTime(), y: map.get(d).sleep / 60, xLabel: shortDay(d) };
+  }), { timeScale: true, goal: g.sleep / 60, emptyText: "Aucun sommeil saisi sur 30 jours" });
+}
+
+// ---------- SILHOUETTE ----------
+const SILHOUETTE_FILL = "#6b7280";
+const SILHOUETTE_STROKE = "#ffffff";
+
+function bmiCategory(bmi) {
+  if (bmi < 18.5) return "maigreur";
+  if (bmi < 25) return "corpulence normale";
+  if (bmi < 30) return "surpoids";
+  if (bmi < 35) return "obésité modérée";
+  if (bmi < 40) return "obésité sévère";
+  return "obésité massive";
+}
+
+// Courbe lisse passant par des points (Catmull-Rom converti en Bézier).
+function smoothPath(points) {
+  let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+// Silhouette caricaturale : grise, contour blanc, sans visage. Largeurs interpolées selon l'IMC.
+function buildSilhouetteSvg(heightCm, bmi, sex) {
+  const t = Math.min(1, Math.max(0, (bmi - 18) / (45 - 18)));
+  const male = sex !== "f";
+  const cx = 110;
+  const ground = 345;
+  const S = 300 * Math.min(1.12, Math.max(0.78, heightCm / 185)); // hauteur du personnage
+  const top = ground - S;
+  const y = (f) => top + S * f;
+
+  const headR = S * 0.068;
+  const neck = 6 + 5 * t;
+  const shoulder = (male ? 33 : 29) + (male ? 15 : 13) * t;
+  const chest = (male ? 29 : 27) + 21 * t;
+  const belly = 21 + 43 * t;
+  const hip = (male ? 25 : 30) + (male ? 27 : 29) * t;
+  const thigh = 15 + 18 * t;
+  const arm = 9 + 10 * t;
+
+  const yShoulder = y(0.18);
+  const yChest = y(0.27);
+  const yWaist = y(0.40);
+  const yHip = y(0.50);
+  const yCrotch = y(0.555);
+
+  // Tronc : côté gauche du haut vers le bas, puis côté droit en miroir.
+  const left = [
+    [cx - neck, yShoulder - 4],
+    [cx - shoulder + 6, yShoulder],
+    [cx - shoulder, yShoulder + 10],
+    [cx - chest, yChest],
+    [cx - belly, yWaist],
+    [cx - hip, yHip],
+    [cx - hip + 3, yCrotch],
+  ];
+  const right = left.slice().reverse().map(([x, yy]) => [2 * cx - x, yy]);
+  const torso = smoothPath(left) + ` L${right[0][0].toFixed(1)},${right[0][1].toFixed(1)} ` +
+    smoothPath(right).replace(/^M[^C]*/, "") + " Z";
+
+  // Membres : trait épais blanc (contour) puis trait gris légèrement plus fin par-dessus.
+  const armX = Math.max(shoulder, belly * 0.92) + arm * 0.45;
+  const legX = Math.max(thigh / 2 + 2, hip - thigh / 2);
+  const limbs = [
+    { x1: cx - shoulder + arm * 0.3, y1: yShoulder + 8, x2: cx - armX - 6, y2: y(0.53), w: arm },
+    { x1: cx + shoulder - arm * 0.3, y1: yShoulder + 8, x2: cx + armX + 6, y2: y(0.53), w: arm },
+    { x1: cx - legX, y1: yHip, x2: cx - legX * 0.8 - 2, y2: ground - thigh * 0.25, w: thigh },
+    { x1: cx + legX, y1: yHip, x2: cx + legX * 0.8 + 2, y2: ground - thigh * 0.25, w: thigh },
+  ];
+  const line = (l, w, color) =>
+    `<line x1="${l.x1.toFixed(1)}" y1="${l.y1.toFixed(1)}" x2="${l.x2.toFixed(1)}" y2="${l.y2.toFixed(1)}" stroke="${color}" stroke-width="${w.toFixed(1)}" stroke-linecap="round"/>`;
+
+  return `<svg viewBox="0 0 220 360" role="img" aria-label="Silhouette indicative" xmlns="http://www.w3.org/2000/svg">
+    ${limbs.map((l) => line(l, l.w + 4, SILHOUETTE_STROKE)).join("")}
+    ${limbs.map((l) => line(l, l.w, SILHOUETTE_FILL)).join("")}
+    <path d="${torso}" fill="${SILHOUETTE_FILL}" stroke="${SILHOUETTE_STROKE}" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="${(cx - neck).toFixed(1)}" y="${(y(0.13) - 2).toFixed(1)}" width="${(2 * neck).toFixed(1)}" height="${(yShoulder - y(0.13) + 4).toFixed(1)}" fill="${SILHOUETTE_FILL}"/>
+    <circle cx="${cx}" cy="${(top + headR).toFixed(1)}" r="${headR.toFixed(1)}" fill="${SILHOUETTE_FILL}" stroke="${SILHOUETTE_STROKE}" stroke-width="2"/>
+  </svg>`;
+}
+
+function renderSilhouette() {
+  const p = state.profile;
+  const lw = latestWeight();
+  const height = p && Number(p.height) > 0 ? Number(p.height) : null;
+  const box = $("silhouette");
+  const info = $("silhouetteInfo");
+  if (!height || !lw) {
+    box.innerHTML = buildSilhouetteSvg(175, 22, p && p.sex);
+    info.innerHTML = `Complète ta taille dans le profil et ajoute une pesée pour voir ta silhouette.`;
+    return;
+  }
+  const bmi = lw.weight / Math.pow(height / 100, 2);
+  box.innerHTML = buildSilhouetteSvg(height, bmi, p.sex);
+  info.innerHTML = `${fmt(height, 0)} cm · ${fmt(lw.weight, 1)} kg · IMC ${fmt(bmi, 1)} (${bmiCategory(bmi)})`;
 }
 
 // ---------- GRAPHIQUES ----------
-const CHART_COLORS = { grid: "#2b303b", axis: "#98a2b3", line: "#4f8cff", dot: "#4f8cff", label: "#ffd36b" };
+const CHART_COLORS = { grid: "#2b303b", axis: "#98a2b3", line: "#4f8cff", dot: "#4f8cff", label: "#ffd36b", goal: "#ffb020", ok: "#3ddc97" };
 
 // points : [{ x, y, xLabel, label? }]. Le canvas est dimensionné selon devicePixelRatio.
 function drawLineChart(canvas, points, opts = {}) {
@@ -1997,6 +1587,10 @@ function drawLineChart(canvas, points, opts = {}) {
     yMin -= m;
     yMax += m;
   }
+  if (opts.goal !== undefined) {
+    yMin = Math.min(yMin, opts.goal - (yMax - yMin) * 0.05);
+    yMax = Math.max(yMax, opts.goal + (yMax - yMin) * 0.05);
+  }
   if (yMin < 0 && dataMin >= 0) yMin = 0;
   const xs = opts.timeScale ? points.map((p) => p.x) : points.map((p, i) => i);
   const xMin = Math.min(...xs);
@@ -2030,6 +1624,8 @@ function drawLineChart(canvas, points, opts = {}) {
     ctx.fillStyle = CHART_COLORS.axis;
     ctx.fillText(points[i].xLabel || "", x, cssH - pad.b + 8);
   }
+
+  if (opts.goal !== undefined) drawGoalLine(ctx, pad.l, cssW - pad.r, Y(opts.goal));
 
   // Courbe
   ctx.strokeStyle = CHART_COLORS.line;
@@ -2067,11 +1663,94 @@ function drawLineChart(canvas, points, opts = {}) {
   });
 }
 
+function drawGoalLine(ctx, x1, x2, y) {
+  ctx.save();
+  ctx.strokeStyle = CHART_COLORS.goal;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x1, Math.round(y) + 0.5);
+  ctx.lineTo(x2, Math.round(y) + 0.5);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = CHART_COLORS.goal;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("objectif", x2, y - 2);
+  ctx.restore();
+}
+
+// Barres verticales (une par jour, valeur null = jour sans saisie) avec ligne d'objectif.
+function drawBarChart(canvas, points, opts = {}) {
+  if (!canvas) return;
+  const cssW = canvas.clientWidth;
+  const cssH = canvas.clientHeight;
+  if (!cssW || !cssH) return;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext ? canvas.getContext("2d") : null;
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+  const values = points.map((p) => p.y).filter((v) => v !== null && isFinite(v));
+  if (!values.length) {
+    ctx.fillStyle = CHART_COLORS.axis;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(opts.emptyText || "Pas encore de données", cssW / 2, cssH / 2);
+    return;
+  }
+  const pad = { l: 44, r: 14, t: 18, b: 26 };
+  const W = cssW - pad.l - pad.r;
+  const H = cssH - pad.t - pad.b;
+  const yMax = Math.max(...values, opts.goal || 0) * 1.1 || 1;
+  const Y = (v) => pad.t + (1 - v / yMax) * H;
+
+  ctx.lineWidth = 1;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const v = (yMax * i) / 4;
+    const yy = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = CHART_COLORS.grid;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, yy);
+    ctx.lineTo(cssW - pad.r, yy);
+    ctx.stroke();
+    ctx.fillStyle = CHART_COLORS.axis;
+    ctx.fillText(v >= 1000 ? fmt(v / 1000, 1) + " k" : fmt(v, 0), pad.l - 6, yy);
+  }
+
+  const slot = W / points.length;
+  const bw = Math.max(2, slot * 0.7);
+  points.forEach((p, i) => {
+    if (p.y === null || !isFinite(p.y)) return;
+    const x = pad.l + slot * i + (slot - bw) / 2;
+    const yy = Y(p.y);
+    ctx.fillStyle = opts.goal !== undefined && p.y >= opts.goal ? CHART_COLORS.ok : CHART_COLORS.line;
+    ctx.fillRect(x, yy, bw, pad.t + H - yy);
+  });
+  if (opts.goal !== undefined) drawGoalLine(ctx, pad.l, cssW - pad.r, Y(opts.goal));
+
+  ctx.fillStyle = CHART_COLORS.axis;
+  ctx.textBaseline = "top";
+  const idx = [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])];
+  for (const i of idx) {
+    ctx.textAlign = i === 0 ? "left" : i === points.length - 1 ? "right" : "center";
+    const x = i === 0 ? pad.l : i === points.length - 1 ? cssW - pad.r : pad.l + slot * (i + 0.5);
+    ctx.fillText(points[i].xLabel || "", x, cssH - pad.b + 8);
+  }
+}
+
 function renderCharts() {
   const draw = () => {
     if (!state.user) return;
     if (state.currentTab === "sport") drawSportChart();
     if (state.currentTab === "poids") drawWeightChart();
+    if (state.currentTab === "activite") drawActivityCharts();
   };
   if (window.requestAnimationFrame) window.requestAnimationFrame(draw);
   else draw();
@@ -2206,7 +1885,8 @@ function renderAll() {
   if (!state.user) return;
   renderSport();
   renderWeights();
-  renderFoods();
+  renderActivity();
+  renderSilhouette();
   renderNeeds();
   renderCharts();
 }
@@ -2214,12 +1894,12 @@ function renderAll() {
 async function onDeleteClick(btn) {
   const table = btn.dataset.del;
   const id = btn.dataset.id;
-  const coll = { sets: state.sets, weights: state.weights, foods: state.foods }[table];
+  const coll = { sets: state.sets, weights: state.weights, daily_activity: state.activity }[table];
   const row = coll && coll.find((r) => String(r.id) === id);
   if (!row) return;
   const desc = table === "sets" ? `la série ${row.exercise} ${fmt(row.weight)} kg × ${row.reps}`
     : table === "weights" ? `la pesée de ${fmt(row.weight, 2)} kg du ${dayLabel(dayKey(row.ts))}`
-    : `« ${row.name} »`;
+    : `la journée du ${dayLabel(row.day)}`;
   if (!window.confirm(`Supprimer ${desc} ?`)) return;
   btn.disabled = true;
   try {
@@ -2274,32 +1954,20 @@ function bindUI() {
   });
   $("recordClose").addEventListener("click", () => { $("recordBanner").hidden = true; });
   $("weightForm").addEventListener("submit", onWeightSubmit);
-  $("foodSearch").addEventListener("input", onFoodSearchInput);
-  $("foodSearch").addEventListener("focus", onFoodSearchInput);
-  $("foodSearch").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); searchFoodsOnline(); }
-  });
-  $("foodOnlineBtn").addEventListener("click", searchFoodsOnline);
-  $("foodBarcodeBtn").addEventListener("click", lookupBarcode);
-  $("foodBarcode").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); lookupBarcode(); }
-  });
-  $("foodQty").addEventListener("input", prefillFood);
-  $("foodForm").addEventListener("submit", onFoodSubmit);
+  $("activityForm").addEventListener("submit", onActivitySubmit);
+  $("actDate").addEventListener("change", fillActivityFormForDay);
+  $("goalsForm").addEventListener("submit", onGoalsSubmit);
+  $("setExerciseSelect").addEventListener("change", onExerciseSelectChange);
   $("profileForm").addEventListener("submit", onProfileSubmit);
   $("logoutBtn").addEventListener("click", logout);
-  $("importFile").addEventListener("change", onImportFile);
-  $("importConfirm").addEventListener("click", confirmImport);
-  $("importCancel").addEventListener("click", resetImport);
 
   document.addEventListener("click", (e) => {
     const del = e.target.closest("[data-del]");
     if (del) { e.preventDefault(); onDeleteClick(del); return; }
-    const pick = e.target.closest("[data-food-index]");
-    if (pick) { const f = state.foodResults[Number(pick.dataset.foodIndex)]; if (f) selectFood(f); return; }
     const go = e.target.closest("[data-goto]");
     if (go) { showTab(go.dataset.goto); window.scrollTo(0, 0); return; }
     if (e.target.closest("#weightShowAll")) { state.showAllWeights = true; renderWeights(); }
+    if (e.target.closest("#actShowAll")) { state.showAllActivity = true; renderActivity(); }
   });
 
   let resizeTimer = null;
@@ -2311,12 +1979,13 @@ function bindUI() {
   // Retour sur l'app (autre appareil, nouveau jour) : on resynchronise.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible" || !state.user) return;
-    if (state.foodsDay !== todayStr() || Date.now() - state.lastLoad > 30000) loadAll({ silent: true });
+    if (Date.now() - state.lastLoad > 30000) loadAll({ silent: true });
   });
 }
 
 function boot() {
   injectAppleIcon();
+  fillGoalsForm();
   bindUI();
   try {
     const saved = localStorage.getItem(STORAGE_PREFIX + ":tab");
