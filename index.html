@@ -1,0 +1,2040 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FitSuivi">
+<meta name="theme-color" content="#0f1115">
+<meta name="format-detection" content="telephone=no">
+<title>FitSuivi</title>
+<link rel="apple-touch-icon" id="appleTouchIcon">
+<link rel="icon" id="favicon">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0f1115;--surface:#171a21;--surface2:#1f232c;--line:#2b303b;
+  --text:#e9ecf1;--muted:#98a2b3;--accent:#4f8cff;--accent-press:#3b74e0;
+  --ok:#3ddc97;--warn:#ffb020;--danger:#ff5d5d;
+  --radius:14px;--tabh:60px;
+  --safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text)}
+body{font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100vh;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+h1,h2,h3{margin:0;line-height:1.25}
+h2{font-size:17px;margin-bottom:12px}
+h3{font-size:14px;margin:16px 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+p{margin:0 0 10px}
+ul,ol{margin:0}
+a{color:var(--accent)}
+
+/* Barre du haut */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(15,17,21,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:calc(var(--safe-top) + 10px) max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left))}
+.topbar h1{font-size:20px;max-width:720px;margin:0 auto}
+main{max-width:720px;margin:0 auto;padding:14px max(16px,env(safe-area-inset-right)) calc(var(--tabh) + var(--safe-bottom) + 28px) max(16px,env(safe-area-inset-left))}
+.tab{display:none}
+.tab.active{display:block}
+
+/* Cartes et formulaires */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.field{margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 5px}
+input,select{width:100%;min-height:46px;padding:10px 12px;font-size:16px;font-family:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--line);border-radius:10px;-webkit-appearance:none;appearance:none}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+input[type=date]{display:block}
+input[type=file]{padding:10px;min-height:52px}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2398a2b3' stroke-width='2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;padding:10px 16px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-size:16px;font-weight:600;font-family:inherit;cursor:pointer}
+.btn:active{background:var(--accent-press)}
+.btn:disabled{opacity:.55}
+.btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid rgba(255,93,93,.6)}
+.btn-row{display:flex;gap:10px;margin-top:12px}
+.icon-btn{flex:none;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:18px;cursor:pointer}
+.icon-btn:active{background:var(--surface2)}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.empty{color:var(--muted);font-size:14px;padding:4px 0}
+
+/* Listes */
+.item{display:flex;align-items:center;gap:10px;min-height:48px;padding:4px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .main{flex:1;min-width:0}
+.item .sub{font-size:13px;color:var(--muted)}
+
+/* Statistiques */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:10px 0}
+.stat{background:var(--surface2);border-radius:12px;padding:10px 12px}
+.stat .k{display:block;font-size:12px;color:var(--muted)}
+.stat .v{display:block;font-size:18px;font-weight:700}
+.stat .n{display:block;font-size:12px;color:var(--muted)}
+
+/* Alertes */
+.alert{border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px}
+.alert ul{padding-left:18px;margin-top:4px}
+.alert li{margin-bottom:3px}
+.alert.info{background:rgba(79,140,255,.10);border:1px solid rgba(79,140,255,.35)}
+.alert.warn{background:rgba(255,176,32,.10);border:1px solid rgba(255,176,32,.45);color:#ffd27a}
+.alert.error{background:rgba(255,93,93,.10);border:1px solid rgba(255,93,93,.45);color:#ffaaaa}
+.alert.ok{background:rgba(61,220,151,.10);border:1px solid rgba(61,220,151,.4)}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 6px;border-radius:6px;background:rgba(255,176,32,.18);color:#ffd27a;vertical-align:middle}
+
+/* Bandeau record */
+.record-banner{display:flex;align-items:flex-start;gap:10px;background:linear-gradient(135deg,#ffd36b,#ff9f43);color:#2a1800;border-radius:var(--radius);padding:12px 8px 12px 16px;margin-bottom:14px;box-shadow:0 6px 24px rgba(255,170,60,.25);animation:pop .35s ease-out}
+.record-banner strong{display:block;font-size:19px}
+.record-banner ul{margin:4px 0 0;padding-left:18px;font-size:14px}
+.record-banner .icon-btn{color:#2a1800}
+@keyframes pop{0%{transform:scale(.92);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* Historique sport */
+details.ex{border-top:1px solid var(--line)}
+details.ex:first-child{border-top:0}
+details.ex summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:52px;cursor:pointer}
+details.ex summary::-webkit-details-marker{display:none}
+details.ex summary .name{flex:1;font-weight:600;min-width:0}
+details.ex summary .meta{font-size:12px;color:var(--muted);text-align:right}
+details.ex summary::after{content:"›";color:var(--muted);font-size:22px;transition:transform .2s}
+details.ex[open] summary::after{transform:rotate(90deg)}
+.day{margin:2px 0 12px;padding-left:10px;border-left:2px solid var(--line)}
+.day-title{font-size:13px;color:var(--muted);margin:6px 0 0;text-transform:capitalize}
+.suggest{background:rgba(61,220,151,.09);border:1px solid rgba(61,220,151,.35);border-radius:12px;padding:10px 12px;font-size:14px;margin:10px 0}
+.suggest strong{display:block;margin-bottom:2px}
+
+/* Graphiques */
+canvas.chart{display:block;width:100%;height:230px;margin-top:6px}
+
+/* Barres de progression */
+.progress{margin-bottom:12px}
+.progress .head{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:4px}
+.bar{height:12px;background:var(--surface2);border-radius:6px;overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--ok);border-radius:6px;transition:width .3s}
+.progress.over .bar>span{background:var(--danger)}
+.progress.over .head .val{color:var(--danger);font-weight:600}
+
+/* Besoins */
+.big{font-size:32px;font-weight:800;line-height:1.1}
+.big small{font-size:14px;font-weight:500;color:var(--muted)}
+.macros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.macro{background:var(--surface2);border-radius:12px;padding:10px 6px;text-align:center}
+.macro .v{font-size:19px;font-weight:700}
+.macro .k{font-size:12px;color:var(--muted)}
+details.box{margin-top:8px}
+details.box summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--accent);font-weight:600}
+ol.calc{padding-left:20px;font-size:13px;color:var(--muted)}
+ol.calc li{margin-bottom:5px}
+ol.steps{padding-left:20px;font-size:14px}
+ol.steps li{margin-bottom:6px}
+
+/* Navigation par onglets */
+nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:rgba(18,21,27,.97);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:0 env(safe-area-inset-right) var(--safe-bottom) env(safe-area-inset-left)}
+nav.tabbar button{flex:1;min-width:0;min-height:var(--tabh);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:0;color:var(--muted);font-size:10.5px;font-weight:600;font-family:inherit;cursor:pointer;padding:6px 1px}
+nav.tabbar button .ic{font-size:21px;line-height:1;filter:grayscale(1);opacity:.65}
+nav.tabbar button.active{color:var(--accent)}
+nav.tabbar button.active .ic{filter:none;opacity:1}
+
+/* Toast, chargement, connexion */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + var(--safe-bottom) + 14px);z-index:50;width:max-content;max-width:calc(100% - 32px);background:#262b35;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.toast.error{border-color:var(--danger);color:#ffb3b3}
+.toast.ok{border-color:var(--ok)}
+#loading{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;gap:10px;background:rgba(15,17,21,.8);font-weight:600}
+.spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--safe-top) + 24px) 20px calc(var(--safe-bottom) + 24px)}
+.login-box{width:100%;max-width:380px}
+.logo{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#4f8cff,#3ddc97);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff;margin:0 auto 14px}
+.login-box h1{text-align:center;font-size:26px;margin-bottom:6px}
+.login-box .lead{text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- Écran de connexion -->
+<div id="login" hidden>
+  <div class="login-box">
+    <div class="logo">FS</div>
+    <h1>FitSuivi</h1>
+    <p class="lead">Connecte-toi pour accéder à tes données.</p>
+    <div id="loginNotice" class="alert warn" hidden></div>
+    <form id="loginForm" class="card">
+      <div class="field">
+        <label for="loginEmail">E-mail</label>
+        <input id="loginEmail" type="email" autocomplete="username" autocapitalize="off" required>
+      </div>
+      <div class="field">
+        <label for="loginPassword">Mot de passe</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn" type="submit" id="loginBtn">Se connecter</button>
+      <div id="loginError" class="alert error" hidden></div>
+    </form>
+  </div>
+</div>
+
+<!-- Application -->
+<div id="app" hidden>
+  <header class="topbar"><h1 id="pageTitle">Sport</h1></header>
+  <main>
+
+    <!-- SPORT -->
+    <section class="tab" id="tab-sport" data-title="Sport">
+      <div id="recordBanner" class="record-banner" role="alert" hidden>
+        <div style="flex:1"><strong>🏆 Nouveau record !</strong><ul id="recordList"></ul></div>
+        <button type="button" class="icon-btn" id="recordClose" aria-label="Fermer">✕</button>
+      </div>
+      <div class="card">
+        <h2>Nouvelle série</h2>
+        <form id="setForm" autocomplete="off">
+          <div class="field">
+            <label for="setExercise">Exercice</label>
+            <input id="setExercise" list="exerciseList" required maxlength="80" autocapitalize="sentences">
+            <datalist id="exerciseList"></datalist>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label for="setWeight">Charge (kg)</label>
+              <input id="setWeight" type="number" inputmode="decimal" step="0.5" min="0" max="1000" required>
+            </div>
+            <div class="field">
+              <label for="setReps">Répétitions</label>
+              <input id="setReps" type="number" inputmode="numeric" step="1" min="1" max="1000" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="setRir">RIR (répétitions en réserve)</label>
+            <select id="setRir">
+              <option value="">Non renseigné</option>
+              <option value="0">0 — échec, plus aucune rep possible</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5+</option>
+            </select>
+          </div>
+          <button class="btn" type="submit" id="setSubmit">Enregistrer la série</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Analyse par exercice</h2>
+        <div class="field">
+          <label for="exSelect">Exercice</label>
+          <select id="exSelect"></select>
+        </div>
+        <div id="exRecords"></div>
+        <div id="exSuggestion"></div>
+        <h3>Charge max par séance</h3>
+        <canvas id="sportChart" class="chart"></canvas>
+        <p class="hint">Étiquette : RIR de la série la plus lourde de la séance, s'il est renseigné.</p>
+      </div>
+      <div class="card">
+        <h2>Historique</h2>
+        <div id="setHistory"></div>
+      </div>
+    </section>
+
+    <!-- POIDS -->
+    <section class="tab" id="tab-poids" data-title="Poids">
+      <div class="card">
+        <h2>Nouvelle pesée</h2>
+        <form id="weightForm">
+          <div class="grid2">
+            <div class="field">
+              <label for="weightValue">Poids (kg)</label>
+              <input id="weightValue" type="number" inputmode="decimal" step="any" min="20" max="400" required>
+            </div>
+            <div class="field">
+              <label for="weightDate">Date</label>
+              <input id="weightDate" type="date" required>
+            </div>
+          </div>
+          <button class="btn" type="submit" id="weightSubmit">Ajouter la pesée</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Évolution</h2>
+        <div id="weightSummary"></div>
+        <canvas id="weightChart" class="chart"></canvas>
+      </div>
+      <div class="card">
+        <h2>Historique</h2>
+        <div id="weightHistory"></div>
+      </div>
+    </section>
+
+    <!-- ALIMENTATION -->
+    <section class="tab" id="tab-alim" data-title="Alimentation">
+      <div class="card">
+        <h2 id="foodDayTitle">Aujourd'hui</h2>
+        <div id="foodProgress"></div>
+      </div>
+      <div class="card">
+        <h2>Ajouter un aliment</h2>
+        <form id="foodForm" autocomplete="off">
+          <div class="grid2">
+            <div class="field">
+              <label for="foodBase">Base (valeurs / 100 g)</label>
+              <select id="foodBase"></select>
+            </div>
+            <div class="field">
+              <label for="foodQty">Quantité (g)</label>
+              <input id="foodQty" type="number" inputmode="decimal" step="any" min="0" value="100">
+            </div>
+          </div>
+          <div class="field">
+            <label for="foodName">Nom</label>
+            <input id="foodName" required maxlength="100">
+          </div>
+          <div class="grid2">
+            <div class="field"><label for="foodKcal">Calories (kcal)</label><input id="foodKcal" type="number" inputmode="decimal" step="any" min="0"></div>
+            <div class="field"><label for="foodProtein">Protéines (g)</label><input id="foodProtein" type="number" inputmode="decimal" step="any" min="0"></div>
+            <div class="field"><label for="foodCarbs">Glucides (g)</label><input id="foodCarbs" type="number" inputmode="decimal" step="any" min="0"></div>
+            <div class="field"><label for="foodFat">Lipides (g)</label><input id="foodFat" type="number" inputmode="decimal" step="any" min="0"></div>
+          </div>
+          <button class="btn" type="submit" id="foodSubmit">Ajouter</button>
+          <p class="hint">Valeurs de la base indicatives : ajuste-les selon l'étiquette de ton produit.</p>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Aliments du jour</h2>
+        <div id="foodList"></div>
+      </div>
+    </section>
+
+    <!-- PROFIL -->
+    <section class="tab" id="tab-profil" data-title="Profil">
+      <div class="card" id="needsCard"></div>
+      <div class="card">
+        <h2>Mon profil</h2>
+        <form id="profileForm">
+          <div class="grid2">
+            <div class="field">
+              <label for="profSex">Sexe</label>
+              <select id="profSex" required>
+                <option value="">Choisir…</option>
+                <option value="m">Homme</option>
+                <option value="f">Femme</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="profAge">Âge</label>
+              <input id="profAge" type="number" inputmode="numeric" step="1" min="10" max="100" required>
+            </div>
+            <div class="field">
+              <label for="profHeight">Taille (cm)</label>
+              <input id="profHeight" type="number" inputmode="decimal" step="any" min="100" max="250" required>
+            </div>
+            <div class="field">
+              <label for="profSessions">Séances / semaine</label>
+              <input id="profSessions" type="number" inputmode="numeric" step="1" min="0" max="14" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="profActivity">Activité hors sport</label>
+            <select id="profActivity">
+              <option value="0">Sédentaire (+0)</option>
+              <option value="0.1">Modérée (+0,1)</option>
+              <option value="0.2">Très active (+0,2)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="profGoal">Objectif</label>
+            <select id="profGoal" required>
+              <option value="">Choisir…</option>
+              <option value="cut">Perte de poids</option>
+              <option value="maintain">Maintien</option>
+              <option value="bulk">Prise de masse</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="profBodyFat">Masse grasse (%) — facultatif</label>
+            <input id="profBodyFat" type="number" inputmode="decimal" step="any" min="3" max="70">
+            <div class="hint">Laisse vide pour utiliser une estimation à partir de l'IMC.</div>
+          </div>
+          <button class="btn" type="submit" id="profileSubmit">Enregistrer le profil</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Compte</h2>
+        <p class="small muted">Connecté : <span id="accountEmail"></span></p>
+        <button class="btn danger" type="button" id="logoutBtn">Se déconnecter</button>
+      </div>
+    </section>
+
+    <!-- IMPORT -->
+    <section class="tab" id="tab-import" data-title="Import">
+      <div class="card">
+        <h2>Importer depuis Huawei Santé</h2>
+        <p class="small muted">Huawei Santé n'a pas d'API publique : l'import se fait à partir d'un export de tes données (fichier CSV ou JSON). Le fichier est lu uniquement sur cet appareil ; seules les pesées sont enregistrées, les pas et calories sont seulement affichés.</p>
+        <h3>Obtenir l'export</h3>
+        <ol class="steps">
+          <li>Ouvre les réglages de ton <strong>compte HUAWEI</strong> (Paramètres du téléphone → ton nom / Compte HUAWEI, ou l'espace « Compte HUAWEI » sur le web).</li>
+          <li>Va dans <strong>Confidentialité</strong> (parfois « Centre de confidentialité » ou « Gestion des données »), puis choisis <strong>Demander une copie de vos données</strong> / « Télécharger vos données ».</li>
+          <li>Coche <strong>Santé</strong> (Huawei Santé / Health) et valide. Un mot de passe peut être demandé pour protéger l'archive : note-le.</li>
+          <li>Quand l'export est prêt (notification ou e-mail, parfois après quelques jours), télécharge l'archive ZIP et décompresse-la avec ce mot de passe.</li>
+          <li>Repère le fichier CSV ou JSON qui contient les données de santé (poids) et sélectionne-le ci-dessous.</li>
+        </ol>
+        <p class="hint">Le chemin exact dans les menus peut varier selon la version de Huawei Santé, d'EMUI/HarmonyOS et le pays.</p>
+      </div>
+      <div class="card">
+        <h2>Fichier</h2>
+        <div class="field">
+          <label for="importFile">Fichier CSV ou JSON</label>
+          <input id="importFile" type="file" accept=".csv,.json,.txt,text/csv,application/json,text/plain">
+        </div>
+        <div id="importPreview"></div>
+        <div class="btn-row" id="importActions" hidden>
+          <button class="btn secondary" type="button" id="importCancel">Annuler</button>
+          <button class="btn" type="button" id="importConfirm">Importer</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Navigation principale">
+    <button type="button" data-tab="sport"><span class="ic">🏋️</span>Sport</button>
+    <button type="button" data-tab="poids"><span class="ic">⚖️</span>Poids</button>
+    <button type="button" data-tab="alim"><span class="ic">🍽️</span>Alimentation</button>
+    <button type="button" data-tab="profil"><span class="ic">👤</span>Profil</button>
+    <button type="button" data-tab="import"><span class="ic">📥</span>Import</button>
+  </nav>
+</div>
+
+<div id="toast" class="toast" role="status" hidden></div>
+<div id="loading"><div class="spinner"></div>Chargement…</div>
+
+<script>
+"use strict";
+
+// ---------- CONFIG ----------
+// Les deux seules valeurs à remplacer (Supabase → Project Settings → API / Data API).
+const SUPABASE_URL = "https://brlgawncfrewhblgtvlk.supabase.co";
+const SUPABASE_KEY = "sb_publishable_-WDRG1zqgj4rlOl9b29kgg_hv0eaZ9r";
+
+const APP_NAME = "FitSuivi";
+const APP_INITIALS = "FS";
+const STORAGE_PREFIX = "fitsuivi";
+const PAGE_SIZE = 1000; // nombre maximal de lignes renvoyées par requête par Supabase
+// Colonnes facultatives : si elles manquent en base, l'app enregistre le reste et garde la valeur en local.
+const OPTIONAL_COLUMNS = { sets: ["rir"], profile: ["body_fat"] };
+const MISSING_COLUMN_CODES = ["42703", "PGRST204"];
+
+const state = {
+  user: null,
+  sets: [],
+  weights: [],
+  foods: [],
+  foodsDay: null,
+  profile: null,
+  selectedExercise: "",
+  showAllWeights: false,
+  currentTab: "sport",
+  lastLoad: 0,
+  loadingPromise: null,
+  importPending: null,
+};
+let sb = null; // client Supabase, créé au démarrage
+
+function isConfigured() {
+  return /^https:\/\/\S+$/.test(SUPABASE_URL) &&
+    !SUPABASE_URL.includes("VOTRE-ID-PROJET") &&
+    SUPABASE_KEY.length > 20 &&
+    !SUPABASE_KEY.startsWith("VOTRE-");
+}
+
+// ---------- AUTH ----------
+function showLogin(message) {
+  $("app").hidden = true;
+  $("login").hidden = false;
+  setLoading(false);
+  const notice = $("loginNotice");
+  notice.textContent = message || "";
+  notice.hidden = !message;
+}
+
+function showApp() {
+  $("login").hidden = true;
+  $("app").hidden = false;
+}
+
+async function initAuth() {
+  // Ne jamais attendre un appel Supabase directement dans ce callback : on diffère avec setTimeout.
+  sb.auth.onAuthStateChange((event, session) => {
+    setTimeout(() => {
+      if (event === "SIGNED_OUT" || !session) {
+        if (state.user) handleSignedOut();
+        return;
+      }
+      if (!state.user || state.user.id !== session.user.id) handleSignedIn(session.user);
+    }, 0);
+  });
+  const { data, error } = await sb.auth.getSession();
+  if (error) console.warn(error);
+  const session = data && data.session;
+  if (session) handleSignedIn(session.user);
+  else showLogin();
+}
+
+function handleSignedIn(user) {
+  if (state.user && state.user.id === user.id) return;
+  state.user = user;
+  showApp();
+  $("accountEmail").textContent = user.email || "";
+  $("weightDate").value = todayStr();
+  showTab(state.currentTab);
+  loadAll();
+}
+
+function handleSignedOut() {
+  state.user = null;
+  state.sets = [];
+  state.weights = [];
+  state.foods = [];
+  state.profile = null;
+  state.importPending = null;
+  $("profileForm").reset();
+  showLogin();
+}
+
+async function onLoginSubmit(e) {
+  e.preventDefault();
+  if (!sb) return;
+  const btn = $("loginBtn");
+  const errBox = $("loginError");
+  errBox.hidden = true;
+  btn.disabled = true;
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: $("loginEmail").value.trim(),
+      password: $("loginPassword").value,
+    });
+    if (error) throw error;
+    $("loginPassword").value = "";
+    if (data && data.user) handleSignedIn(data.user);
+  } catch (err) {
+    const msg = String((err && err.message) || "");
+    errBox.textContent = /invalid login/i.test(msg) ? "E-mail ou mot de passe incorrect."
+      : /not confirmed/i.test(msg) ? "Adresse e-mail non confirmée : confirme l'utilisateur dans Supabase."
+      : errorText(err);
+    errBox.hidden = false;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function logout() {
+  if (!window.confirm("Se déconnecter ?")) return;
+  try {
+    await sb.auth.signOut();
+  } catch (err) {
+    console.warn(err);
+  }
+  handleSignedOut();
+}
+
+// ---------- DATA ----------
+// Lit toutes les lignes d'une table (pagination pour dépasser la limite de 1000 lignes).
+async function fetchAll(table, build) {
+  let from = 0;
+  let all = [];
+  for (;;) {
+    const { data, error } = await build(sb.from(table).select("*")).range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
+async function loadProfile() {
+  const { data, error } = await sb.from("profile").select("*").eq("user_id", state.user.id).maybeSingle();
+  if (error) throw error;
+  return data ? applyLocalOptional("profile", [data])[0] : null;
+}
+
+async function loadFoodsToday() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const rows = await fetchAll("foods", (q) => q
+    .gte("created_at", start.toISOString())
+    .lt("created_at", end.toISOString())
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true }));
+  state.foods = rows.map(normalizeFood).sort(byTs);
+  state.foodsDay = dayKey(start);
+}
+
+async function reloadWeights() {
+  const rows = await fetchAll("weights", (q) => q.order("created_at", { ascending: true }).order("id", { ascending: true }));
+  state.weights = rows.map(normalizeWeight).sort(byTs);
+}
+
+async function loadAll(opts = {}) {
+  if (state.loadingPromise) return state.loadingPromise;
+  state.loadingPromise = (async () => {
+    if (!opts.silent) setLoading(true);
+    try {
+      const [sets, , profile] = await Promise.all([
+        fetchAll("sets", (q) => q.order("created_at", { ascending: true }).order("id", { ascending: true })),
+        reloadWeights(),
+        loadProfile(),
+      ]);
+      state.sets = applyLocalOptional("sets", sets).map(normalizeSet).sort(byTs);
+      state.profile = profile;
+      await loadFoodsToday();
+      state.lastLoad = Date.now();
+      if (!opts.silent) fillProfileForm();
+      renderAll();
+    } catch (err) {
+      console.error(err);
+      toast("Chargement impossible : " + errorText(err), "error");
+    } finally {
+      setLoading(false);
+      state.loadingPromise = null;
+    }
+  })();
+  return state.loadingPromise;
+}
+
+// --- Colonnes facultatives (sets.rir, profile.body_fat) ---
+const knownMissingColumns = new Set();
+
+function rowKey(table, row) {
+  return table === "profile" ? row.user_id : row.id;
+}
+
+function localOptionalKey(table, col, key) {
+  return `${STORAGE_PREFIX}:${table}:${col}:${key}`;
+}
+
+function localOptionalGet(table, col, key) {
+  try {
+    const raw = localStorage.getItem(localOptionalKey(table, col, key));
+    return raw === null ? null : JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+}
+
+function localOptionalSet(table, col, key, value) {
+  try {
+    const k = localOptionalKey(table, col, key);
+    if (value === null || value === undefined || value === "") localStorage.removeItem(k);
+    else localStorage.setItem(k, JSON.stringify(value));
+  } catch (err) {
+    console.warn("localStorage indisponible", err);
+  }
+}
+
+// Complète les lignes lues : si la colonne facultative manque (ou est vide), on relit la valeur locale.
+function applyLocalOptional(table, rows) {
+  const optional = OPTIONAL_COLUMNS[table] || [];
+  return rows.map((row) => {
+    const out = { ...row };
+    for (const col of optional) {
+      if (!(col in out) || out[col] === null || out[col] === undefined) {
+        const local = localOptionalGet(table, col, rowKey(table, out));
+        out[col] = local === null ? (col in out ? out[col] : null) : local;
+      }
+    }
+    return out;
+  });
+}
+
+function findMissingOptionalColumn(error, table, payload) {
+  if (!error || !MISSING_COLUMN_CODES.includes(String(error.code || ""))) return null;
+  const text = `${error.message || ""} ${error.details || ""} ${error.hint || ""}`;
+  const candidates = (OPTIONAL_COLUMNS[table] || []).filter((c) => c in payload);
+  return candidates.find((c) => text.includes(c)) || candidates[0] || null;
+}
+
+// Fonction unique d'écriture : si une colonne facultative manque en base (42703 / PGRST204),
+// on réessaie sans elle, on enregistre le reste et on garde la valeur dans localStorage.
+async function saveWithOptionalColumns(table, mode, row) {
+  const optional = OPTIONAL_COLUMNS[table] || [];
+  const payload = { ...row };
+  const dropped = {};
+  for (const col of optional) {
+    if (knownMissingColumns.has(`${table}.${col}`) && col in payload) {
+      dropped[col] = payload[col];
+      delete payload[col];
+    }
+  }
+  for (let attempt = 0; attempt <= optional.length; attempt++) {
+    const query = mode === "upsert"
+      ? sb.from(table).upsert(payload, { onConflict: "user_id" })
+      : sb.from(table).insert(payload);
+    const { data, error } = await query.select().single();
+    if (!error) {
+      const key = rowKey(table, data);
+      for (const col of optional) {
+        if (col in dropped) {
+          localOptionalSet(table, col, key, dropped[col]);
+          data[col] = dropped[col] === undefined ? null : dropped[col];
+        } else if (col in payload) {
+          localOptionalSet(table, col, key, null); // la colonne existe : une éventuelle valeur locale est obsolète
+        }
+      }
+      return data;
+    }
+    const col = findMissingOptionalColumn(error, table, payload);
+    if (!col) throw error;
+    console.warn(`Colonne ${table}.${col} absente en base : valeur conservée localement.`);
+    knownMissingColumns.add(`${table}.${col}`);
+    dropped[col] = payload[col];
+    delete payload[col];
+  }
+  throw new Error("Enregistrement impossible.");
+}
+
+async function deleteRow(table, id) {
+  const { error } = await sb.from(table).delete().eq("id", id);
+  if (error) throw error;
+  for (const col of OPTIONAL_COLUMNS[table] || []) localOptionalSet(table, col, id, null);
+}
+
+// ---------- SPORT ----------
+function normalizeSet(r) {
+  return {
+    id: r.id,
+    ts: parseTs(r.created_at),
+    exercise: String(r.exercise || "").trim(),
+    weight: Number(r.weight) || 0,
+    reps: Number(r.reps) || 0,
+    rir: r.rir === null || r.rir === undefined || r.rir === "" ? null : Number(r.rir),
+  };
+}
+
+function rirText(rir) {
+  return rir >= 5 ? "5+" : String(rir);
+}
+
+// Exercices triés du plus récemment utilisé au plus ancien.
+function exerciseNames() {
+  const last = new Map();
+  for (const s of state.sets) last.set(s.exercise, s.ts);
+  return [...last.entries()].sort((a, b) => b[1] - a[1]).map((e) => e[0]);
+}
+
+function canonicalExercise(name) {
+  const clean = String(name || "").trim().replace(/\s+/g, " ");
+  const existing = exerciseNames().find((n) => n.toLowerCase() === clean.toLowerCase());
+  return existing || clean;
+}
+
+function setsOf(name) {
+  return state.sets.filter((s) => s.exercise === name);
+}
+
+function computeRecords(list) {
+  if (!list.length) return null;
+  let maxWeight = -Infinity;
+  let best = null;
+  let rirSum = 0;
+  let rirCount = 0;
+  for (const s of list) {
+    if (s.weight > maxWeight) maxWeight = s.weight;
+    const volume = s.weight * s.reps;
+    if (!best || volume > best.volume) best = { weight: s.weight, reps: s.reps, volume };
+    if (s.rir !== null) {
+      rirSum += s.rir;
+      rirCount++;
+    }
+  }
+  return { count: list.length, maxWeight, best, avgRir: rirCount ? rirSum / rirCount : null, rirCount };
+}
+
+function recordMessages(prev, weight, reps) {
+  if (!prev) return [];
+  const msgs = [];
+  if (weight > prev.maxWeight) {
+    msgs.push(`Charge max : ${fmt(weight)} kg (ancien record : ${fmt(prev.maxWeight)} kg)`);
+  }
+  if (weight * reps > prev.best.volume) {
+    msgs.push(`Meilleure série : ${fmt(weight)} kg × ${reps} = ${fmt(weight * reps)} (ancienne : ${fmt(prev.best.weight)} kg × ${prev.best.reps} = ${fmt(prev.best.volume)})`);
+  }
+  return msgs;
+}
+
+function exerciseSuggestion(name) {
+  const list = setsOf(name);
+  if (!list.length) return null;
+  const lastDay = dayKey(list[list.length - 1].ts);
+  const daySets = list.filter((s) => dayKey(s.ts) === lastDay);
+  const rated = daySets.filter((s) => s.rir !== null);
+  const top = Math.max(...daySets.map((s) => s.weight));
+  const info = `Dernière séance : ${dayLabel(lastDay)} · ${daySets.length} série(s), ${rated.length} avec RIR renseigné.`;
+  if (!rated.length) {
+    return { info, text: "Aucun RIR renseigné lors de la dernière séance : impossible de proposer un ajustement. Renseigne le RIR de tes séries pour obtenir une suggestion." };
+  }
+  if (rated.every((s) => s.rir >= 3)) {
+    return { info, text: `Toutes les séries renseignées étaient à RIR 3 ou plus : augmente légèrement la charge (${fmt(top + 2.5)} kg, soit +2,5 kg) ou ajoute 1 à 2 répétitions.` };
+  }
+  if (rated.some((s) => s.rir === 0)) {
+    return { info, text: `Au moins une série à RIR 0 : maintiens la charge (${fmt(top)} kg) et soigne ta récupération (sommeil, alimentation, repos entre les séances).` };
+  }
+  return { info, text: `Maintiens la charge (${fmt(top)} kg) et vise une répétition de plus par série.` };
+}
+
+function sportChartPoints(name) {
+  const byDay = new Map();
+  for (const s of setsOf(name)) {
+    const k = dayKey(s.ts);
+    let d = byDay.get(k);
+    if (!d) {
+      d = { day: k, ts: s.ts, max: -Infinity, rir: null };
+      byDay.set(k, d);
+    }
+    if (s.weight > d.max) {
+      d.max = s.weight;
+      d.rir = s.rir;
+    } else if (s.weight === d.max && s.rir !== null && (d.rir === null || s.rir < d.rir)) {
+      d.rir = s.rir;
+    }
+  }
+  return [...byDay.values()].map((d) => ({
+    x: d.ts,
+    y: d.max,
+    xLabel: shortDay(d.day),
+    label: d.rir === null ? "" : "RIR " + rirText(d.rir),
+  }));
+}
+
+async function onSetSubmit(e) {
+  e.preventDefault();
+  const exercise = canonicalExercise($("setExercise").value);
+  const weight = inputNum($("setWeight"));
+  const reps = Math.round(inputNum($("setReps")));
+  const rirValue = $("setRir").value;
+  const rir = rirValue === "" ? null : Number(rirValue);
+  if (!exercise) return toast("Indique un exercice.", "error");
+  if (!isFinite(weight) || weight < 0) return toast("Charge invalide.", "error");
+  if (!isFinite(reps) || reps < 1) return toast("Nombre de répétitions invalide.", "error");
+
+  // Comparaison avec les records existants AVANT l'insertion.
+  const messages = recordMessages(computeRecords(setsOf(exercise)), weight, reps);
+
+  const btn = $("setSubmit");
+  btn.disabled = true;
+  try {
+    const row = await saveWithOptionalColumns("sets", "insert", { exercise, weight, reps, rir });
+    state.sets.push(normalizeSet(row));
+    state.sets.sort(byTs);
+    state.selectedExercise = exercise;
+    $("setExercise").value = exercise;
+    if (messages.length) showRecord(messages);
+    else {
+      $("recordBanner").hidden = true;
+      toast("Série enregistrée", "ok");
+    }
+    renderAll();
+  } catch (err) {
+    toast("Erreur : " + errorText(err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showRecord(messages) {
+  $("recordList").innerHTML = messages.map((m) => `<li>${esc(m)}</li>`).join("");
+  const banner = $("recordBanner");
+  banner.hidden = true;
+  void banner.offsetWidth; // relance l'animation
+  banner.hidden = false;
+  if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderSport() {
+  const names = exerciseNames();
+  $("exerciseList").innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join("");
+  if (!names.includes(state.selectedExercise)) state.selectedExercise = names[0] || "";
+  const sel = $("exSelect");
+  sel.innerHTML = names.length
+    ? names.map((n) => `<option value="${esc(n)}"${n === state.selectedExercise ? " selected" : ""}>${esc(n)}</option>`).join("")
+    : `<option value="">Aucun exercice</option>`;
+  sel.disabled = !names.length;
+
+  const name = state.selectedExercise;
+  const rec = name ? computeRecords(setsOf(name)) : null;
+  $("exRecords").innerHTML = rec
+    ? `<div class="stats">
+        ${statHtml("Charge max", fmt(rec.maxWeight) + " kg")}
+        ${statHtml("Meilleure série", `${fmt(rec.best.weight)} kg × ${rec.best.reps}`, "charge × reps = " + fmt(rec.best.volume))}
+        ${statHtml("RIR moyen", rec.avgRir === null ? "—" : fmt(rec.avgRir, 1), rec.rirCount ? `sur ${rec.rirCount} série(s) renseignée(s)` : "aucun RIR renseigné")}
+      </div>`
+    : `<p class="empty">Enregistre une première série pour voir tes records, suggestions et graphiques.</p>`;
+
+  const sug = name ? exerciseSuggestion(name) : null;
+  $("exSuggestion").innerHTML = sug
+    ? `<div class="suggest"><strong>Suggestion pour la prochaine séance</strong>${esc(sug.text)}<div class="hint">${esc(sug.info)}</div></div>`
+    : "";
+
+  renderSetHistory(names);
+}
+
+function renderSetHistory(names) {
+  const el = $("setHistory");
+  if (!names.length) {
+    el.innerHTML = `<p class="empty">Aucune série enregistrée.</p>`;
+    return;
+  }
+  el.innerHTML = names.map((name) => {
+    const list = setsOf(name);
+    const rec = computeRecords(list);
+    const days = new Map();
+    for (const s of list) {
+      const k = dayKey(s.ts);
+      if (!days.has(k)) days.set(k, []);
+      days.get(k).push(s);
+    }
+    const dayHtml = [...days.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).map(([k, sets]) => `
+      <div class="day">
+        <div class="day-title">${esc(dayLabel(k))}</div>
+        ${sets.map((s) => `
+          <div class="item">
+            <div class="main"><strong>${fmt(s.weight)} kg × ${s.reps}</strong>
+              <span class="sub"> · ${s.rir === null ? "RIR —" : "RIR " + rirText(s.rir)} · ${timeLabel(s.ts)}</span></div>
+            <button type="button" class="icon-btn" data-del="sets" data-id="${esc(String(s.id))}" aria-label="Supprimer la série">🗑</button>
+          </div>`).join("")}
+      </div>`).join("");
+    return `<details class="ex"${name === state.selectedExercise ? " open" : ""}>
+      <summary><span class="name">${esc(name)}</span>
+        <span class="meta">${list.length} série(s)<br>max ${fmt(rec.maxWeight)} kg · RIR moy. ${rec.avgRir === null ? "—" : fmt(rec.avgRir, 1)}</span></summary>
+      ${dayHtml}
+    </details>`;
+  }).join("");
+}
+
+function drawSportChart() {
+  const name = state.selectedExercise;
+  drawLineChart($("sportChart"), name ? sportChartPoints(name) : [], {
+    emptyText: "Aucune série pour cet exercice",
+    unit: "kg",
+  });
+}
+
+// ---------- POIDS ----------
+function normalizeWeight(r) {
+  return { id: r.id, ts: parseTs(r.created_at), weight: Number(r.weight) || 0 };
+}
+
+function latestWeight() {
+  return state.weights.length ? state.weights[state.weights.length - 1] : null;
+}
+
+async function onWeightSubmit(e) {
+  e.preventDefault();
+  const weight = inputNum($("weightValue"));
+  const dateStr = $("weightDate").value || todayStr();
+  if (!isFinite(weight) || weight < 20 || weight > 400) return toast("Poids invalide (20 à 400 kg).", "error");
+  let created;
+  if (dateStr === todayStr()) created = new Date();
+  else {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    created = new Date(y, m - 1, d, 12, 0, 0); // midi heure locale
+  }
+  const btn = $("weightSubmit");
+  btn.disabled = true;
+  try {
+    const row = await saveWithOptionalColumns("weights", "insert", { weight: round2(weight), created_at: created.toISOString() });
+    state.weights.push(normalizeWeight(row));
+    state.weights.sort(byTs);
+    $("weightValue").value = "";
+    $("weightDate").value = todayStr();
+    toast("Pesée ajoutée", "ok");
+    renderAll();
+  } catch (err) {
+    toast("Erreur : " + errorText(err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderWeights() {
+  const lw = latestWeight();
+  const sum = $("weightSummary");
+  if (!lw) {
+    sum.innerHTML = `<p class="empty">Aucune pesée. Ajoute ta première pesée : elle servira de référence pour tes besoins quotidiens.</p>`;
+  } else {
+    const prev = state.weights.length > 1 ? state.weights[state.weights.length - 2] : null;
+    const first = state.weights[0];
+    sum.innerHTML = `<div class="stats">
+      ${statHtml("Dernière pesée", fmt(lw.weight, 2) + " kg", dayLabel(dayKey(lw.ts)))}
+      ${prev ? statHtml("Depuis la précédente", signed(lw.weight - prev.weight) + " kg") : ""}
+      ${state.weights.length > 1 ? statHtml("Depuis le début", signed(lw.weight - first.weight) + " kg", "depuis le " + dayLabel(dayKey(first.ts))) : ""}
+    </div>`;
+  }
+  const hist = $("weightHistory");
+  if (!state.weights.length) {
+    hist.innerHTML = `<p class="empty">Aucune pesée enregistrée.</p>`;
+    return;
+  }
+  const desc = state.weights.slice().reverse();
+  const limit = state.showAllWeights ? desc.length : Math.min(desc.length, 40);
+  hist.innerHTML = desc.slice(0, limit).map((w) => `
+    <div class="item">
+      <div class="main"><strong>${fmt(w.weight, 2)} kg</strong><div class="sub">${esc(dayLabel(dayKey(w.ts)))} · ${timeLabel(w.ts)}</div></div>
+      <button type="button" class="icon-btn" data-del="weights" data-id="${esc(String(w.id))}" aria-label="Supprimer la pesée">🗑</button>
+    </div>`).join("") +
+    (limit < desc.length ? `<button type="button" class="btn secondary" id="weightShowAll" style="margin-top:10px">Afficher tout (${desc.length})</button>` : "");
+}
+
+function drawWeightChart() {
+  drawLineChart($("weightChart"), state.weights.map((w) => ({
+    x: w.ts,
+    y: w.weight,
+    xLabel: shortDay(dayKey(w.ts)),
+  })), { timeScale: true, emptyText: "Aucune pesée", unit: "kg" });
+}
+
+// ---------- ALIMENTATION ----------
+// Valeurs indicatives pour 100 g.
+const FOOD_DB = [
+  { name: "Blanc de poulet cuit", kcal: 165, p: 31, c: 0, f: 3.6 },
+  { name: "Riz blanc cuit", kcal: 130, p: 2.7, c: 28, f: 0.3 },
+  { name: "Pâtes cuites", kcal: 150, p: 5.5, c: 30, f: 0.9 },
+  { name: "Œuf entier", kcal: 143, p: 12.6, c: 0.7, f: 9.5 },
+  { name: "Flocons d'avoine", kcal: 370, p: 13, c: 60, f: 7 },
+  { name: "Thon au naturel (égoutté)", kcal: 116, p: 26, c: 0, f: 1 },
+  { name: "Saumon", kcal: 208, p: 20, c: 0, f: 13 },
+  { name: "Steak haché 5 % MG", kcal: 125, p: 21, c: 0, f: 5 },
+  { name: "Jambon blanc", kcal: 115, p: 21, c: 1, f: 3 },
+  { name: "Fromage blanc 0 %", kcal: 47, p: 7.5, c: 4, f: 0.1 },
+  { name: "Skyr nature", kcal: 63, p: 11, c: 4, f: 0.2 },
+  { name: "Lait demi-écrémé", kcal: 46, p: 3.3, c: 4.8, f: 1.6 },
+  { name: "Emmental", kcal: 380, p: 28, c: 0, f: 30 },
+  { name: "Banane", kcal: 89, p: 1.1, c: 23, f: 0.3 },
+  { name: "Pomme", kcal: 52, p: 0.3, c: 14, f: 0.2 },
+  { name: "Amandes", kcal: 600, p: 21, c: 10, f: 50 },
+  { name: "Beurre de cacahuète", kcal: 590, p: 25, c: 16, f: 50 },
+  { name: "Huile d'olive", kcal: 900, p: 0, c: 0, f: 100 },
+  { name: "Pain complet", kcal: 240, p: 9, c: 44, f: 2.5 },
+  { name: "Pomme de terre cuite", kcal: 80, p: 2, c: 17, f: 0.1 },
+  { name: "Patate douce cuite", kcal: 90, p: 2, c: 21, f: 0.1 },
+  { name: "Lentilles cuites", kcal: 116, p: 9, c: 20, f: 0.4 },
+  { name: "Brocoli cuit", kcal: 35, p: 2.8, c: 4.5, f: 0.4 },
+  { name: "Haricots verts cuits", kcal: 30, p: 2, c: 4, f: 0.2 },
+  { name: "Avocat", kcal: 160, p: 2, c: 2, f: 15 },
+  { name: "Chocolat noir 70 %", kcal: 580, p: 8, c: 35, f: 42 },
+  { name: "Protéine en poudre (whey)", kcal: 375, p: 75, c: 8, f: 5 },
+];
+
+function normalizeFood(r) {
+  return {
+    id: r.id,
+    ts: parseTs(r.created_at),
+    name: String(r.name || ""),
+    kcal: Number(r.kcal) || 0,
+    protein: Number(r.protein) || 0,
+    carbs: Number(r.carbs) || 0,
+    fat: Number(r.fat) || 0,
+  };
+}
+
+function initFoodBase() {
+  $("foodBase").innerHTML = `<option value="">— Saisie libre —</option>` +
+    FOOD_DB.map((f, i) => ({ f, i }))
+      .sort((a, b) => a.f.name.localeCompare(b.f.name, "fr"))
+      .map(({ f, i }) => `<option value="${i}">${esc(f.name)}</option>`).join("");
+}
+
+function prefillFood() {
+  const idx = $("foodBase").value;
+  if (idx === "") return;
+  const food = FOOD_DB[Number(idx)];
+  const qty = inputNum($("foodQty"));
+  if (!food || !isFinite(qty) || qty < 0) return;
+  const k = qty / 100;
+  $("foodName").value = `${food.name} (${fmt(qty, 0)} g)`;
+  $("foodKcal").value = round1(food.kcal * k);
+  $("foodProtein").value = round1(food.p * k);
+  $("foodCarbs").value = round1(food.c * k);
+  $("foodFat").value = round1(food.f * k);
+}
+
+async function onFoodSubmit(e) {
+  e.preventDefault();
+  const name = $("foodName").value.trim();
+  const val = (id) => {
+    const n = inputNum($(id));
+    return isFinite(n) && n > 0 ? round1(n) : 0;
+  };
+  if (!name) return toast("Indique un nom d'aliment.", "error");
+  const row = { name, kcal: val("foodKcal"), protein: val("foodProtein"), carbs: val("foodCarbs"), fat: val("foodFat") };
+  const btn = $("foodSubmit");
+  btn.disabled = true;
+  try {
+    const saved = await saveWithOptionalColumns("foods", "insert", row);
+    if (state.foodsDay !== todayStr()) await loadFoodsToday();
+    else {
+      state.foods.push(normalizeFood(saved));
+      state.foods.sort(byTs);
+    }
+    $("foodForm").reset();
+    $("foodQty").value = 100;
+    toast("Aliment ajouté", "ok");
+    renderAll();
+  } catch (err) {
+    toast("Erreur : " + errorText(err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function progressRow(label, total, target, unit) {
+  const over = total > target + 1e-9;
+  const pct = target > 0 ? (total / target) * 100 : (total > 0 ? 100 : 0);
+  return `<div class="progress${over ? " over" : ""}">
+    <div class="head"><span>${label}</span><span class="val">${fmt(total, 0)} / ${fmt(target, 0)} ${unit}${over ? " · dépassé" : ""}</span></div>
+    <div class="bar"><span style="width:${Math.min(100, pct).toFixed(1)}%"></span></div>
+  </div>`;
+}
+
+function renderFoods() {
+  $("foodDayTitle").textContent = "Aujourd'hui · " + dayLabel(todayStr());
+  const totals = state.foods.reduce((t, f) => ({
+    kcal: t.kcal + f.kcal, protein: t.protein + f.protein, carbs: t.carbs + f.carbs, fat: t.fat + f.fat,
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+
+  const needs = currentNeeds();
+  const prog = $("foodProgress");
+  if (needs.ok) {
+    prog.innerHTML =
+      progressRow("Calories", totals.kcal, needs.calories, "kcal") +
+      progressRow("Protéines", totals.protein, needs.protein, "g") +
+      progressRow("Glucides", totals.carbs, needs.carbs, "g") +
+      progressRow("Lipides", totals.fat, needs.fat, "g");
+  } else {
+    prog.innerHTML = `<div class="stats">
+        ${statHtml("Calories", fmt(totals.kcal, 0) + " kcal")}
+        ${statHtml("Protéines", fmt(totals.protein, 0) + " g")}
+        ${statHtml("Glucides", fmt(totals.carbs, 0) + " g")}
+        ${statHtml("Lipides", fmt(totals.fat, 0) + " g")}
+      </div>
+      <div class="alert info">Complète ton profil et ajoute une pesée pour comparer ces totaux à tes cibles.
+        <div class="btn-row"><button type="button" class="btn secondary" data-goto="profil">Profil</button><button type="button" class="btn secondary" data-goto="poids">Pesée</button></div></div>`;
+  }
+
+  const list = $("foodList");
+  list.innerHTML = state.foods.length
+    ? state.foods.map((f) => `
+      <div class="item">
+        <div class="main"><strong>${esc(f.name)}</strong>
+          <div class="sub">${fmt(f.kcal, 0)} kcal · P ${fmt(f.protein)} g · G ${fmt(f.carbs)} g · L ${fmt(f.fat)} g · ${timeLabel(f.ts)}</div></div>
+        <button type="button" class="icon-btn" data-del="foods" data-id="${esc(String(f.id))}" aria-label="Supprimer l'aliment">🗑</button>
+      </div>`).join("")
+    : `<p class="empty">Rien d'enregistré aujourd'hui.</p>`;
+}
+
+// ---------- PROFIL / BESOINS ----------
+function sessionsCoefficient(sessions) {
+  if (sessions <= 1) return 1.2;
+  if (sessions === 2) return 1.375;
+  if (sessions === 3) return 1.465;
+  if (sessions <= 5) return 1.55;
+  return 1.725;
+}
+
+// Calcul pur des besoins quotidiens (testable indépendamment de l'interface).
+function computeNeeds(profile, weight) {
+  const missing = [];
+  const p = profile || {};
+  const age = Number(p.age);
+  const height = Number(p.height);
+  const sessions = Math.round(Number(p.sessions) || 0);
+  const activity = Number(p.activity) || 0;
+  const goalFactors = { cut: 0.8, maintain: 1, bulk: 1.1 };
+  if (!profile || !["m", "f"].includes(p.sex) || !(age > 0) || !(height > 0) || !(p.goal in goalFactors)) missing.push("profile");
+  if (!(Number(weight) > 0)) missing.push("weight");
+  if (missing.length) return { ok: false, missing };
+
+  const w = Number(weight);
+  const male = p.sex === "m";
+  const hm = height / 100;
+  const bmi = w / (hm * hm);
+
+  let bf;
+  let bfRaw = null;
+  let bfEstimated = false;
+  const bfInput = p.body_fat;
+  if (bfInput !== null && bfInput !== undefined && bfInput !== "" && isFinite(Number(bfInput))) {
+    bf = Number(bfInput);
+  } else {
+    bfRaw = 1.2 * bmi + 0.23 * age - 10.8 * (male ? 1 : 0) - 5.4; // Deurenberg
+    bf = Math.min(50, Math.max(5, bfRaw));
+    bfEstimated = true;
+  }
+
+  const lbm = w * (1 - bf / 100);
+  const bmr = 10 * w + 6.25 * height - 5 * age + (male ? 5 : -161); // Mifflin-St Jeor
+  const baseCoef = sessionsCoefficient(sessions);
+  const coef = baseCoef + activity;
+  const tdee = bmr * coef;
+  const goalFactor = goalFactors[p.goal];
+  const rawCalories = tdee * goalFactor;
+  const floor = male ? 1500 : 1200;
+  const floored = rawCalories < floor;
+  const calories = floored ? floor : rawCalories;
+
+  const proteinPerKg = p.goal === "cut" ? 2.7 : 2.2;
+  const protein = proteinPerKg * lbm;
+  const fatFromPct = (0.27 * calories) / 9;
+  const fatMin = 1 * lbm;
+  const fat = Math.max(fatFromPct, fatMin);
+  let carbs = (calories - protein * 4 - fat * 9) / 4;
+  const carbsZero = carbs <= 0;
+  if (carbsZero) carbs = 0;
+  const fiber = (14 * calories) / 1000;
+  const sugarMax = (0.10 * calories) / 4;
+
+  return {
+    ok: true, weight: w, male, age, height, sessions, activity, goal: p.goal,
+    bmi, bf, bfRaw, bfEstimated, lbm, bmr, baseCoef, coef, tdee, goalFactor,
+    rawCalories, floor, floored, calories, proteinPerKg, protein, fatFromPct, fatMin, fat,
+    carbs, carbsZero, fiber, sugarMax,
+    proteinPct: (protein * 4 / calories) * 100,
+    fatPct: (fat * 9 / calories) * 100,
+    carbsPct: (carbs * 4 / calories) * 100,
+  };
+}
+
+function currentNeeds() {
+  const lw = latestWeight();
+  return computeNeeds(state.profile, lw ? lw.weight : null);
+}
+
+function fillProfileForm() {
+  const p = state.profile;
+  if (!p) return;
+  $("profSex").value = p.sex || "";
+  $("profAge").value = p.age ?? "";
+  $("profHeight").value = p.height ?? "";
+  $("profSessions").value = p.sessions ?? "";
+  $("profActivity").value = String(Number(p.activity) || 0);
+  $("profGoal").value = p.goal || "";
+  $("profBodyFat").value = p.body_fat ?? "";
+}
+
+async function onProfileSubmit(e) {
+  e.preventDefault();
+  const sex = $("profSex").value;
+  const age = Math.round(inputNum($("profAge")));
+  const height = inputNum($("profHeight"));
+  const sessions = Math.round(inputNum($("profSessions")));
+  const activity = Number($("profActivity").value) || 0;
+  const goal = $("profGoal").value;
+  const bfRawInput = $("profBodyFat").value.trim();
+  const bodyFat = bfRawInput === "" ? null : inputNum($("profBodyFat"));
+
+  if (!["m", "f"].includes(sex)) return toast("Choisis le sexe.", "error");
+  if (!(age >= 10 && age <= 100)) return toast("Âge invalide (10 à 100).", "error");
+  if (!(height >= 100 && height <= 250)) return toast("Taille invalide (100 à 250 cm).", "error");
+  if (!(sessions >= 0 && sessions <= 14)) return toast("Nombre de séances invalide (0 à 14).", "error");
+  if (!["cut", "maintain", "bulk"].includes(goal)) return toast("Choisis un objectif.", "error");
+  if (bodyFat !== null && !(bodyFat >= 3 && bodyFat <= 70)) return toast("Masse grasse invalide (3 à 70 %).", "error");
+
+  const btn = $("profileSubmit");
+  btn.disabled = true;
+  try {
+    const row = await saveWithOptionalColumns("profile", "upsert", {
+      user_id: state.user.id, sex, age, height, sessions, activity, goal,
+      body_fat: bodyFat, updated_at: new Date().toISOString(),
+    });
+    state.profile = row;
+    toast("Profil enregistré", "ok");
+    renderAll();
+  } catch (err) {
+    toast("Erreur : " + errorText(err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderNeeds() {
+  const el = $("needsCard");
+  const lw = latestWeight();
+  const n = currentNeeds();
+  if (!n.ok) {
+    el.innerHTML = `<h2>Mes besoins quotidiens</h2>` +
+      (n.missing.includes("weight")
+        ? `<div class="alert info">Ajoute une pesée : la dernière pesée sert de poids de référence pour les calculs.
+            <div class="btn-row"><button type="button" class="btn secondary" data-goto="poids">Ajouter une pesée</button></div></div>`
+        : "") +
+      (n.missing.includes("profile") ? `<div class="alert info">Complète et enregistre ton profil ci-dessous.</div>` : "");
+    return;
+  }
+  const goalLabel = { cut: "perte de poids", maintain: "maintien", bulk: "prise de masse" }[n.goal];
+  const calc = [
+    `IMC = ${fmt(n.weight, 2)} / (${fmt(n.height / 100, 2)})² = ${fmt(n.bmi, 1)}`,
+    n.bfEstimated
+      ? `MG (Deurenberg) = 1,2 × ${fmt(n.bmi, 2)} + 0,23 × ${n.age} − 10,8 × ${n.male ? 1 : 0} − 5,4 = ${fmt(n.bfRaw, 1)} %` +
+        (n.bfRaw !== n.bf ? ` → bornée à ${fmt(n.bf, 1)} %` : "") + " (estimation)"
+      : `MG saisie = ${fmt(n.bf, 1)} %`,
+    `Masse maigre = ${fmt(n.weight, 2)} × (1 − ${fmt(n.bf, 1)} / 100) = ${fmt(n.lbm, 2)} kg`,
+    `BMR (Mifflin-St Jeor) = 10 × ${fmt(n.weight, 2)} + 6,25 × ${fmt(n.height, 1)} − 5 × ${n.age} ${n.male ? "+ 5" : "− 161"} = ${fmt(n.bmr, 1)} kcal`,
+    `Coefficient = ${fmt(n.baseCoef, 3)} (${n.sessions} séance(s)/semaine) + ${fmt(n.activity, 1)} (hors sport) = ${fmt(n.coef, 3)}`,
+    `TDEE = ${fmt(n.bmr, 1)} × ${fmt(n.coef, 3)} = ${fmt(n.tdee, 0)} kcal`,
+    `Calories cibles = ${fmt(n.tdee, 0)} × ${fmt(n.goalFactor, 1)} = ${fmt(n.rawCalories, 0)} kcal` + (n.floored ? ` → plancher ${n.floor} kcal` : ""),
+    `Protéines = ${fmt(n.proteinPerKg, 1)} g × ${fmt(n.lbm, 2)} kg = ${fmt(n.protein, 0)} g`,
+    `Lipides = max(27 % × ${fmt(n.calories, 0)} / 9 = ${fmt(n.fatFromPct, 0)} g ; 1 g × ${fmt(n.lbm, 2)} kg = ${fmt(n.fatMin, 0)} g) = ${fmt(n.fat, 0)} g`,
+    `Glucides = (${fmt(n.calories, 0)} − ${fmt(n.protein, 0)} × 4 − ${fmt(n.fat, 0)} × 9) / 4 = ${fmt(n.carbs, 0)} g`,
+    `Fibres ≈ 14 × ${fmt(n.calories, 0)} / 1000 = ${fmt(n.fiber, 0)} g`,
+    `Sucres (limite indicative) = 10 % × ${fmt(n.calories, 0)} / 4 = ${fmt(n.sugarMax, 0)} g`,
+  ];
+  el.innerHTML = `
+    <h2>Mes besoins quotidiens</h2>
+    <div class="big">${fmt(n.calories, 0)} <small>kcal / jour · ${goalLabel}</small></div>
+    <p class="hint">Poids de référence : ${fmt(n.weight, 2)} kg (pesée du ${esc(dayLabel(dayKey(lw.ts)))})</p>
+    ${n.floored ? `<div class="alert warn">Le calcul donnait ${fmt(n.rawCalories, 0)} kcal, sous le plancher de ${n.floor} kcal (${n.male ? "homme" : "femme"}) : le plancher est utilisé. Une restriction plus forte est déconseillée sans suivi médical.</div>` : ""}
+    ${n.carbsZero ? `<div class="alert warn">Protéines et lipides couvrent déjà toutes les calories : glucides ramenés à 0 g. Revois ton objectif ou ton profil.</div>` : ""}
+    ${n.age < 18 ? `<div class="alert warn">Moins de 18 ans : ces formules ne sont pas adaptées, demande l'avis d'un médecin.</div>` : ""}
+    <div class="macros">
+      <div class="macro"><div class="v">${fmt(n.protein, 0)} g</div><div class="k">Protéines · ${fmt(n.proteinPct, 0)} %</div></div>
+      <div class="macro"><div class="v">${fmt(n.carbs, 0)} g</div><div class="k">Glucides · ${fmt(n.carbsPct, 0)} %</div></div>
+      <div class="macro"><div class="v">${fmt(n.fat, 0)} g</div><div class="k">Lipides · ${fmt(n.fatPct, 0)} %</div></div>
+    </div>
+    <div class="stats">
+      ${statHtml("Masse maigre", fmt(n.lbm, 2) + " kg")}
+      ${statHtml("Masse grasse", fmt(n.bf, 1) + " %", n.bfEstimated ? `<span class="tag">estimation</span>` : "saisie")}
+      ${statHtml("IMC", fmt(n.bmi, 1))}
+      ${statHtml("BMR (métabolisme de base)", fmt(n.bmr, 1) + " kcal")}
+      ${statHtml("TDEE (dépense totale)", fmt(n.tdee, 0) + " kcal")}
+      ${statHtml("Fibres", "≈ " + fmt(n.fiber, 0) + " g")}
+      ${statHtml("Sucres (max indicatif)", fmt(n.sugarMax, 0) + " g")}
+    </div>
+    <details class="box"><summary>Détail du calcul</summary>
+      <ol class="calc">${calc.map((c) => `<li>${esc(c)}</li>`).join("")}</ol>
+      <p class="hint">Valeurs affichées arrondies ; les calculs utilisent les valeurs exactes.</p>
+    </details>
+    <div class="alert info"><strong>Conseils</strong><ul>
+      <li>Réajuste après 2 à 3 semaines selon l'évolution réelle de ton poids.</li>
+      <li>Ces formules sont des estimations : compte une marge d'erreur d'environ 10 %.</li>
+      <li>Demande un avis médical en cas de grossesse, si tu es mineur(e) ou si tu as une maladie.</li>
+    </ul></div>`;
+}
+
+// ---------- IMPORT ----------
+const IMPORT_EXCLUDE = ["fat", "bmi", "imc", "muscle", "water", "eau", "bone", "os", "target", "goal", "objectif",
+  "cible", "unit", "unite", "gras", "grasse", "graisse", "visceral", "protein", "proteine", "change", "variation",
+  "delta", "diff", "ecart", "min", "max", "avg", "moyenne"];
+const IMPORT_TYPE_KEYS = ["key", "type", "name", "nom", "data type", "datatype", "data name", "metric", "category",
+  "sample type", "field", "indicator", "indicateur", "type de donnee", "mesure type"];
+const IMPORT_VALUE_KEYS = ["value", "val", "valeur", "amount", "quantity", "qty", "data value", "montant"];
+
+function normKey(k) {
+  return String(k)
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+// Reconnaît un champ par son nom (FR/EN, insensible à la casse et aux accents).
+function classifyName(name) {
+  const n = normKey(name);
+  const t = n.split(" ");
+  const has = (w) => t.includes(w);
+  if (IMPORT_EXCLUDE.some(has)) return null;
+  if (has("weight") || has("poids") || n.includes("bodyweight") || n.includes("body weight")) return "weight";
+  if (has("steps") || has("step") || has("pas") || n.includes("stepcount")) return "steps";
+  if (has("calories") || has("calorie") || has("kcal") || has("cal") || n.includes("calorie")) return "calories";
+  return null;
+}
+
+function dateScore(name) {
+  const t = normKey(name).split(" ");
+  if (t.some((w) => ["date", "datetime", "timestamp", "horodatage"].includes(w))) return 3;
+  if (t.includes("start") || t.includes("debut")) return 2;
+  if (t.some((w) => ["time", "heure", "jour", "day", "mesure", "measured", "recorded", "created"].includes(w))) return 1;
+  if (t.includes("end") || t.includes("fin")) return 0.5;
+  return 0;
+}
+
+function parseTimeOfDay(v) {
+  const m = String(v).trim().match(/^(\d{1,2})[:h](\d{2})(?::(\d{2}))?$/i);
+  if (!m || +m[1] > 23 || +m[2] > 59) return null;
+  return { h: +m[1], mi: +m[2], s: m[3] ? +m[3] : 0 };
+}
+
+function localDate(y, mo, d, h, mi, s) {
+  const date = new Date(y, mo - 1, d, h, mi, s);
+  if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) return null;
+  return date;
+}
+
+// Accepte : timestamp (ms ou s), AAAAMMJJ, AAAA-MM-JJ[ HH:MM[:SS]][Z|±HH:MM], JJ/MM/AAAA[ HH:MM], puis Date.parse.
+function parseDateValue(v) {
+  if (v === null || v === undefined || v === "" || typeof v === "boolean") return null;
+  const s = String(v).trim();
+  let d = null;
+  let hasTime = true;
+  let m;
+  if (/^\d{8}$/.test(s)) {
+    d = localDate(+s.slice(0, 4), +s.slice(4, 6), +s.slice(6, 8), 12, 0, 0);
+    hasTime = false;
+  } else if (/^\d{9,13}(\.\d+)?$/.test(s)) {
+    const n = Number(s);
+    if (n >= 1e11) d = new Date(n);            // millisecondes
+    else if (n >= 1e9) d = new Date(n * 1000); // secondes
+  } else if ((m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/i))) {
+    if (m[7] && m[4]) {
+      const tz = m[7].toUpperCase() === "Z" ? "Z" : m[7].replace(/^([+-]\d{2}):?(\d{2})$/, "$1:$2");
+      d = new Date(`${m[1]}-${pad2(m[2])}-${pad2(m[3])}T${pad2(m[4])}:${m[5]}:${pad2(m[6] || 0)}${tz}`);
+    } else {
+      d = localDate(+m[1], +m[2], +m[3], m[4] ? +m[4] : 12, m[5] ? +m[5] : 0, m[6] ? +m[6] : 0);
+      hasTime = !!m[4];
+    }
+  } else if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})(?:[ T,]+(\d{1,2})[:h](\d{2})(?::(\d{2}))?)?/i))) {
+    let a = +m[1];
+    let b = +m[2];
+    let y = +m[3];
+    if (y < 100) y += 2000;
+    let day = a;
+    let month = b;
+    if (a <= 12 && b > 12) { day = b; month = a; } // format américain évident
+    d = localDate(y, month, day, m[4] ? +m[4] : 12, m[5] ? +m[5] : 0, m[6] ? +m[6] : 0);
+    hasTime = !!m[4];
+  } else if (/[a-z]/i.test(s) && /\d{4}/.test(s)) {
+    const t = Date.parse(s);
+    if (!isNaN(t)) d = new Date(t);
+  }
+  if (!d || isNaN(d.getTime())) return null;
+  const year = d.getFullYear();
+  if (year < 1990 || year > 2100) return null;
+  return { date: d, hasTime };
+}
+
+function recordFromObject(obj) {
+  const rec = { date: null, weight: null, steps: null, calories: null };
+  let bestDate = null;
+  let bestScore = 0;
+  let timeOfDay = null;
+  let lb = false;
+  let typeName = null;
+  let typeValue;
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === null || typeof v === "object") continue;
+    const nk = normKey(k);
+    if (IMPORT_TYPE_KEYS.includes(nk) && typeof v === "string") { typeName = v; continue; }
+    if (IMPORT_VALUE_KEYS.includes(nk)) { typeValue = v; continue; }
+    if (["unit", "unite", "units"].includes(nk)) { if (/^lbs?$/i.test(String(v).trim())) lb = true; continue; }
+    const kind = classifyName(k);
+    if (kind) {
+      const n = parseNum(v);
+      if (isFinite(n)) {
+        rec[kind] = n;
+        if (kind === "weight" && /\blbs?\b/.test(nk)) lb = true;
+      }
+      continue;
+    }
+    const score = dateScore(k);
+    if (score > 0) {
+      const tod = parseTimeOfDay(v);
+      if (tod) { timeOfDay = tod; continue; }
+      const pd = parseDateValue(v);
+      if (pd && score > bestScore) { bestDate = pd; bestScore = score; }
+    }
+  }
+  // Motif « clé / valeur » (ex. { type: "weight", value: 75.2, startTime: ... }).
+  if (typeName !== null && typeValue !== undefined) {
+    const kind = classifyName(typeName);
+    const n = parseNum(typeValue);
+    if (kind && isFinite(n) && rec[kind] === null) rec[kind] = n;
+  }
+  if (bestDate) {
+    const d = new Date(bestDate.date.getTime());
+    if (!bestDate.hasTime && timeOfDay) d.setHours(timeOfDay.h, timeOfDay.mi, timeOfDay.s, 0);
+    rec.date = d;
+  }
+  if (rec.weight !== null) {
+    if (lb) rec.weight *= 0.45359237;
+    rec.weight = rec.weight >= 20 && rec.weight <= 400 ? round2(rec.weight) : null;
+  }
+  if (rec.steps !== null && rec.steps < 0) rec.steps = null;
+  if (rec.calories !== null && rec.calories < 0) rec.calories = null;
+  return rec;
+}
+
+function hasImportData(r) {
+  return r.weight !== null || r.steps !== null || r.calories !== null;
+}
+
+// Parcourt un JSON quelconque ; la date d'un objet parent sert de date par défaut à ses enfants.
+function walkJson(node, ctxDate, out) {
+  if (Array.isArray(node)) {
+    for (const n of node) walkJson(n, ctxDate, out);
+    return;
+  }
+  if (!node || typeof node !== "object") return;
+  const rec = recordFromObject(node);
+  const date = rec.date || ctxDate;
+  if (hasImportData(rec)) out.push({ ...rec, date });
+  for (const v of Object.values(node)) {
+    if (v && typeof v === "object") walkJson(v, date, out);
+  }
+}
+
+function countOutsideQuotes(line, ch) {
+  let n = 0;
+  let inQ = false;
+  for (const c of line) {
+    if (c === '"') inQ = !inQ;
+    else if (c === ch && !inQ) n++;
+  }
+  return n;
+}
+
+function parseCSV(text) {
+  text = text.replace(/^\uFEFF/, "");
+  const firstLine = text.split(/\r?\n/).find((l) => l.trim()) || "";
+  let delim = ",";
+  let best = -1;
+  for (const d of [",", ";", "\t", "|"]) {
+    const c = countOutsideQuotes(firstLine, d);
+    if (c > best) { best = c; delim = d; }
+  }
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false;
+      } else field += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === delim) { row.push(field); field = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += ch;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  const lines = rows.filter((r) => r.some((c) => c.trim() !== ""));
+  if (lines.length < 2) return [];
+  const headers = lines[0].map((h) => h.trim());
+  return lines.slice(1).map((r) => {
+    const o = {};
+    headers.forEach((h, i) => { if (h) o[h] = (r[i] === undefined ? "" : r[i]).trim(); });
+    return o;
+  });
+}
+
+function weightDupKey(ts, weight) {
+  return dayKey(ts) + "|" + Math.round(weight * 100);
+}
+
+function analyzeImportText(text, fileName) {
+  const records = [];
+  const trimmed = text.replace(/^\uFEFF/, "").trim();
+  let format = null;
+  if (/\.json$/i.test(fileName) || /^[[{]/.test(trimmed)) {
+    try {
+      walkJson(JSON.parse(trimmed), null, records);
+      format = "JSON";
+    } catch (err) {
+      if (/\.json$/i.test(fileName)) throw new Error("JSON invalide : " + err.message);
+    }
+  }
+  if (!format) {
+    for (const o of parseCSV(text)) {
+      const r = recordFromObject(o);
+      if (hasImportData(r)) records.push(r);
+    }
+    format = "CSV";
+  }
+
+  const weightRecs = records.filter((r) => r.weight !== null && r.date).sort((a, b) => a.date - b.date);
+  const undated = records.filter((r) => r.weight !== null && !r.date).length;
+  const existing = new Set(state.weights.map((w) => weightDupKey(w.ts, w.weight)));
+  const seen = new Set();
+  const toImport = [];
+  let duplicates = 0;
+  for (const r of weightRecs) {
+    const k = weightDupKey(r.date.getTime(), r.weight);
+    if (existing.has(k) || seen.has(k)) { duplicates++; continue; }
+    seen.add(k);
+    toImport.push({ weight: r.weight, date: r.date });
+  }
+  const stepsRecs = records.filter((r) => r.steps !== null);
+  const calRecs = records.filter((r) => r.calories !== null);
+  const datedAll = records.filter((r) => r.date).map((r) => r.date.getTime());
+  const rangeSrc = weightRecs.length ? weightRecs.map((r) => r.date.getTime()) : datedAll;
+  return {
+    format,
+    recordCount: records.length,
+    weightCount: weightRecs.length,
+    undated,
+    duplicates,
+    toImport,
+    rangeStart: rangeSrc.length ? Math.min(...rangeSrc) : null,
+    rangeEnd: rangeSrc.length ? Math.max(...rangeSrc) : null,
+    stepsTotal: stepsRecs.length ? stepsRecs.reduce((s, r) => s + r.steps, 0) : null,
+    caloriesTotal: calRecs.length ? calRecs.reduce((s, r) => s + r.calories, 0) : null,
+  };
+}
+
+function onImportFile(e) {
+  const file = e.target.files && e.target.files[0];
+  state.importPending = null;
+  $("importActions").hidden = true;
+  if (!file) { $("importPreview").innerHTML = ""; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const a = analyzeImportText(String(reader.result || ""), file.name);
+      state.importPending = a.toImport;
+      renderImportPreview(a, file.name);
+    } catch (err) {
+      $("importPreview").innerHTML = `<div class="alert error">${esc(errorText(err))}</div>`;
+    }
+  };
+  reader.onerror = () => {
+    $("importPreview").innerHTML = `<div class="alert error">Lecture du fichier impossible.</div>`;
+  };
+  reader.readAsText(file);
+}
+
+function renderImportPreview(a, fileName) {
+  const range = a.rangeStart === null ? "—"
+    : a.rangeStart === a.rangeEnd ? dayLabel(dayKey(a.rangeStart))
+    : `du ${dayLabel(dayKey(a.rangeStart))} au ${dayLabel(dayKey(a.rangeEnd))}`;
+  const sample = a.toImport.slice(-5).reverse().map((r) =>
+    `<div class="item"><div class="main"><strong>${fmt(r.weight, 2)} kg</strong><div class="sub">${esc(dayLabel(dayKey(r.date)))} · ${timeLabel(r.date.getTime())}</div></div></div>`).join("");
+  let html = `<p class="small muted">${esc(fileName)} · format ${a.format} · ${a.recordCount} enregistrement(s) exploitable(s)</p>
+    <div class="stats">
+      ${statHtml("Pesées détectées", String(a.weightCount))}
+      ${statHtml("À importer", String(a.toImport.length), a.duplicates ? `${a.duplicates} doublon(s) ignoré(s)` : "aucun doublon")}
+      ${statHtml("Plage de dates", range)}
+      ${a.stepsTotal !== null ? statHtml("Pas (total du fichier)", fmt(a.stepsTotal, 0), "affiché seulement") : ""}
+      ${a.caloriesTotal !== null ? statHtml("Calories (total du fichier)", fmt(a.caloriesTotal, 0), "affiché seulement") : ""}
+    </div>`;
+  if (a.undated) html += `<div class="alert warn">${a.undated} pesée(s) sans date reconnue seront ignorées.</div>`;
+  if (a.toImport.length) {
+    html += `<h3>Dernières pesées à importer</h3>${sample}`;
+  } else {
+    html += `<div class="alert info">${a.weightCount ? "Toutes les pesées du fichier sont déjà présentes." : "Aucune pesée reconnue dans ce fichier (colonnes attendues : date/heure/timestamp et poids/weight)."}</div>`;
+  }
+  $("importPreview").innerHTML = html;
+  $("importConfirm").textContent = `Importer ${a.toImport.length} pesée(s)`;
+  $("importActions").hidden = !a.toImport.length;
+}
+
+function resetImport() {
+  state.importPending = null;
+  $("importFile").value = "";
+  $("importPreview").innerHTML = "";
+  $("importActions").hidden = true;
+}
+
+async function confirmImport() {
+  const rows = state.importPending;
+  if (!rows || !rows.length) return;
+  const btn = $("importConfirm");
+  btn.disabled = true;
+  let inserted = 0;
+  try {
+    for (let i = 0; i < rows.length; i += 500) {
+      const chunk = rows.slice(i, i + 500).map((r) => ({ weight: r.weight, created_at: r.date.toISOString() }));
+      const { error } = await sb.from("weights").insert(chunk);
+      if (error) throw error;
+      inserted += chunk.length;
+    }
+    toast(`${inserted} pesée(s) importée(s)`, "ok");
+    resetImport();
+  } catch (err) {
+    toast(`Import interrompu après ${inserted} pesée(s) : ${errorText(err)}`, "error");
+  } finally {
+    btn.disabled = false;
+    try { await reloadWeights(); } catch (err) { console.warn(err); }
+    renderAll();
+  }
+}
+
+// ---------- GRAPHIQUES ----------
+const CHART_COLORS = { grid: "#2b303b", axis: "#98a2b3", line: "#4f8cff", dot: "#4f8cff", label: "#ffd36b" };
+
+// points : [{ x, y, xLabel, label? }]. Le canvas est dimensionné selon devicePixelRatio.
+function drawLineChart(canvas, points, opts = {}) {
+  if (!canvas) return;
+  const cssW = canvas.clientWidth;
+  const cssH = canvas.clientHeight;
+  if (!cssW || !cssH) return; // onglet masqué : on dessinera à l'affichage
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext ? canvas.getContext("2d") : null;
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+  if (!points.length) {
+    ctx.fillStyle = CHART_COLORS.axis;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(opts.emptyText || "Pas encore de données", cssW / 2, cssH / 2);
+    return;
+  }
+
+  const pad = { l: 44, r: 14, t: 26, b: 26 };
+  const W = cssW - pad.l - pad.r;
+  const H = cssH - pad.t - pad.b;
+  const ys = points.map((p) => p.y);
+  const dataMin = Math.min(...ys);
+  let yMin = dataMin;
+  let yMax = Math.max(...ys);
+  if (yMin === yMax) { yMin -= 1; yMax += 1; } else {
+    const m = (yMax - yMin) * 0.12;
+    yMin -= m;
+    yMax += m;
+  }
+  if (yMin < 0 && dataMin >= 0) yMin = 0;
+  const xs = opts.timeScale ? points.map((p) => p.x) : points.map((p, i) => i);
+  const xMin = Math.min(...xs);
+  const xMax = Math.max(...xs);
+  const X = (v) => (xMax === xMin ? pad.l + W / 2 : pad.l + ((v - xMin) / (xMax - xMin)) * W);
+  const Y = (v) => pad.t + (1 - (v - yMin) / (yMax - yMin)) * H;
+
+  // Grille et graduations
+  const decimals = yMax - yMin < 20 ? 1 : 0;
+  ctx.lineWidth = 1;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const v = yMin + ((yMax - yMin) * i) / 4;
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = CHART_COLORS.grid;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y);
+    ctx.lineTo(cssW - pad.r, y);
+    ctx.stroke();
+    ctx.fillStyle = CHART_COLORS.axis;
+    ctx.fillText(fmt(v, decimals), pad.l - 6, y);
+  }
+
+  // Dates en abscisse : première, milieu, dernière
+  ctx.textBaseline = "top";
+  const idx = [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])];
+  for (const i of idx) {
+    const x = X(xs[i]);
+    ctx.textAlign = points.length === 1 ? "center" : i === 0 ? "left" : i === points.length - 1 ? "right" : "center";
+    ctx.fillStyle = CHART_COLORS.axis;
+    ctx.fillText(points[i].xLabel || "", x, cssH - pad.b + 8);
+  }
+
+  // Courbe
+  ctx.strokeStyle = CHART_COLORS.line;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = X(xs[i]);
+    const y = Y(p.y);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Points et étiquettes (sans chevauchement)
+  const r = points.length > 60 ? 2 : 3.5;
+  let lastLabelRight = -Infinity;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  points.forEach((p, i) => {
+    const x = X(xs[i]);
+    const y = Y(p.y);
+    ctx.fillStyle = CHART_COLORS.dot;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    if (p.label) {
+      const w = ctx.measureText(p.label).width;
+      const lx = Math.min(Math.max(x, w / 2 + 2), cssW - w / 2 - 2); // reste dans le canvas
+      if (lx - w / 2 > lastLabelRight + 4) {
+        ctx.fillStyle = CHART_COLORS.label;
+        ctx.fillText(p.label, lx, y - r - 3);
+        lastLabelRight = lx + w / 2;
+      }
+    }
+  });
+}
+
+function renderCharts() {
+  const draw = () => {
+    if (!state.user) return;
+    if (state.currentTab === "sport") drawSportChart();
+    if (state.currentTab === "poids") drawWeightChart();
+  };
+  if (window.requestAnimationFrame) window.requestAnimationFrame(draw);
+  else draw();
+}
+
+// ---------- UI ----------
+function $(id) {
+  return document.getElementById(id);
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function fmt(n, d = 1) {
+  if (n === null || n === undefined || !isFinite(n)) return "—";
+  return Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: d });
+}
+
+function signed(n) {
+  const r = Math.round(n * 100) / 100;
+  return (r > 0 ? "+" : r < 0 ? "−" : "") + fmt(Math.abs(r), 2);
+}
+
+function round1(n) {
+  return Math.round(n * 10) / 10;
+}
+
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+// Accepte « 72,5 », « 72.5 », « 1 234 », « 75 kg »…
+function parseNum(v) {
+  if (typeof v === "number") return isFinite(v) ? v : NaN;
+  if (v === null || v === undefined) return NaN;
+  let s = String(v).trim().replace(/[\s\u00a0\u202f]/g, "");
+  if (!s) return NaN;
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+  if (hasComma && hasDot) {
+    s = s.lastIndexOf(",") > s.lastIndexOf(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  } else if (hasComma) {
+    s = /^\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g, "") : s.replace(",", ".");
+  }
+  const m = s.match(/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?/i);
+  return m ? parseFloat(m[0]) : NaN;
+}
+
+function inputNum(el) {
+  const v = el.valueAsNumber;
+  if (typeof v === "number" && isFinite(v)) return v;
+  return parseNum(el.value);
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+// Clé de jour AAAA-MM-JJ en heure LOCALE de l'appareil.
+function dayKey(input) {
+  const d = input instanceof Date ? input : new Date(input);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function todayStr() {
+  return dayKey(new Date());
+}
+
+function parseTs(s) {
+  if (typeof s === "number") return s;
+  const t = Date.parse(String(s || "").replace(" ", "T").replace(/(\.\d{3})\d+/, "$1"));
+  return isNaN(t) ? Date.now() : t;
+}
+
+function byTs(a, b) {
+  return a.ts - b.ts || (Number(a.id) || 0) - (Number(b.id) || 0);
+}
+
+function dayLabel(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+}
+
+function shortDay(key) {
+  const [, m, d] = key.split("-");
+  return `${d}/${m}`;
+}
+
+function timeLabel(ts) {
+  return new Date(ts).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function statHtml(k, v, n) {
+  return `<div class="stat"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span>${n ? `<span class="n">${n}</span>` : ""}</div>`;
+}
+
+function errorText(err) {
+  const msg = String((err && (err.message || err.error_description)) || err || "Erreur inconnue");
+  if (/failed to fetch|networkerror|load failed/i.test(msg)) return "connexion impossible (réseau ?)";
+  if (err && err.code === "42501") return "accès refusé (vérifie les policies RLS)";
+  if (err && err.code === "42P01") return "table absente : exécute le script SQL dans Supabase";
+  return msg;
+}
+
+let toastTimer = null;
+function toast(message, type) {
+  const el = $("toast");
+  el.textContent = message;
+  el.className = "toast" + (type ? " " + type : "");
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, type === "error" ? 5000 : 2200);
+}
+
+function setLoading(on) {
+  $("loading").hidden = !on;
+}
+
+function showTab(name) {
+  const section = $("tab-" + name);
+  if (!section) name = "sport";
+  state.currentTab = name;
+  try { localStorage.setItem(STORAGE_PREFIX + ":tab", name); } catch (err) { /* sans importance */ }
+  document.querySelectorAll(".tab").forEach((s) => s.classList.toggle("active", s.id === "tab-" + name));
+  document.querySelectorAll("nav.tabbar button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  $("pageTitle").textContent = $("tab-" + name).dataset.title;
+  renderCharts();
+}
+
+function renderAll() {
+  if (!state.user) return;
+  renderSport();
+  renderWeights();
+  renderFoods();
+  renderNeeds();
+  renderCharts();
+}
+
+async function onDeleteClick(btn) {
+  const table = btn.dataset.del;
+  const id = btn.dataset.id;
+  const coll = { sets: state.sets, weights: state.weights, foods: state.foods }[table];
+  const row = coll && coll.find((r) => String(r.id) === id);
+  if (!row) return;
+  const desc = table === "sets" ? `la série ${row.exercise} ${fmt(row.weight)} kg × ${row.reps}`
+    : table === "weights" ? `la pesée de ${fmt(row.weight, 2)} kg du ${dayLabel(dayKey(row.ts))}`
+    : `« ${row.name} »`;
+  if (!window.confirm(`Supprimer ${desc} ?`)) return;
+  btn.disabled = true;
+  try {
+    await deleteRow(table, row.id);
+    const i = coll.indexOf(row);
+    if (i >= 0) coll.splice(i, 1);
+    toast("Supprimé", "ok");
+    renderAll();
+  } catch (err) {
+    btn.disabled = false;
+    toast("Erreur : " + errorText(err), "error");
+  }
+}
+
+// Icône PNG pour iOS, générée au chargement et injectée en data URL.
+function injectAppleIcon() {
+  try {
+    const c = document.createElement("canvas");
+    c.width = 180;
+    c.height = 180;
+    const ctx = c.getContext ? c.getContext("2d") : null;
+    if (!ctx) return;
+    const g = ctx.createLinearGradient(0, 0, 180, 180);
+    g.addColorStop(0, "#4f8cff");
+    g.addColorStop(1, "#3ddc97");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 180, 180);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = 'bold 80px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(APP_INITIALS, 90, 94);
+    const url = c.toDataURL("image/png");
+    $("appleTouchIcon").setAttribute("href", url);
+    $("favicon").setAttribute("href", url);
+  } catch (err) {
+    console.warn("Icône non générée", err);
+  }
+}
+
+function bindUI() {
+  document.querySelectorAll("nav.tabbar button").forEach((b) => b.addEventListener("click", () => {
+    showTab(b.dataset.tab);
+    window.scrollTo(0, 0);
+  }));
+  $("loginForm").addEventListener("submit", onLoginSubmit);
+  $("setForm").addEventListener("submit", onSetSubmit);
+  $("exSelect").addEventListener("change", (e) => {
+    state.selectedExercise = e.target.value;
+    renderSport();
+    renderCharts();
+  });
+  $("recordClose").addEventListener("click", () => { $("recordBanner").hidden = true; });
+  $("weightForm").addEventListener("submit", onWeightSubmit);
+  $("foodBase").addEventListener("change", prefillFood);
+  $("foodQty").addEventListener("input", prefillFood);
+  $("foodForm").addEventListener("submit", onFoodSubmit);
+  $("profileForm").addEventListener("submit", onProfileSubmit);
+  $("logoutBtn").addEventListener("click", logout);
+  $("importFile").addEventListener("change", onImportFile);
+  $("importConfirm").addEventListener("click", confirmImport);
+  $("importCancel").addEventListener("click", resetImport);
+
+  document.addEventListener("click", (e) => {
+    const del = e.target.closest("[data-del]");
+    if (del) { e.preventDefault(); onDeleteClick(del); return; }
+    const go = e.target.closest("[data-goto]");
+    if (go) { showTab(go.dataset.goto); window.scrollTo(0, 0); return; }
+    if (e.target.closest("#weightShowAll")) { state.showAllWeights = true; renderWeights(); }
+  });
+
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderCharts, 150);
+  });
+
+  // Retour sur l'app (autre appareil, nouveau jour) : on resynchronise.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible" || !state.user) return;
+    if (state.foodsDay !== todayStr() || Date.now() - state.lastLoad > 30000) loadAll({ silent: true });
+  });
+}
+
+function boot() {
+  injectAppleIcon();
+  initFoodBase();
+  bindUI();
+  try {
+    const saved = localStorage.getItem(STORAGE_PREFIX + ":tab");
+    if (saved && $("tab-" + saved)) state.currentTab = saved;
+  } catch (err) { /* sans importance */ }
+  if (!isConfigured()) {
+    showLogin("Application non configurée : renseigne SUPABASE_URL et SUPABASE_KEY en haut du script de index.html.");
+    $("loginBtn").disabled = true;
+    return;
+  }
+  if (!window.supabase || !window.supabase.createClient) {
+    showLogin("Impossible de charger la bibliothèque Supabase. Vérifie ta connexion Internet puis recharge la page.");
+    $("loginBtn").disabled = true;
+    return;
+  }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+  });
+  initAuth().catch((err) => {
+    console.error(err);
+    showLogin("Erreur de connexion à Supabase : " + errorText(err));
+  });
+}
+
+boot();
+</script>
+</body>
+</html>
